@@ -22,6 +22,7 @@ public import Circuitlib.Circuit.Basic
 
 namespace Circuit
 
+open CircuitCategory
 open CategoryTheory
 open MonoidalCategory
 open OfNat
@@ -30,24 +31,17 @@ abbrev CombinationalCircuit := CombinationalCircuitCategory BelnapLevel BelnapGa
 
 namespace CombinationalCircuit
 
-def copyPairBraiding :
-    ((ofNat 1 : CombinationalCircuit) ⊗ 1) ⊗ (1 ⊗ 1) ⟶ (1 ⊗ 1) ⊗ (1 ⊗ 1) :=
-  let W := (ofNat 1 : CombinationalCircuit)
-  (α_ W W (W ⊗ W)).hom ≫
-  (W ◁ (α_ W W W).inv) ≫
-  (W ◁ ((β_ W W).hom ▷ W)) ≫
-  (W ◁ (α_ W W W).hom) ≫
-  (α_ W W (W ⊗ W)).inv
+def copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
+  (fork ⊗ₘ fork) ≫
+  (α_ 1 1 2).hom ≫
+  (1 ◁ (α_ 1 1 1).inv) ≫
+  (1 ◁ ((β_ 1 1).hom ▷ 1)) ≫
+  (1 ◁ (α_ 1 1 1).hom) ≫
+  (α_ 1 1 2).inv
 
-def copyPair :
-    (ofNat 1 : CombinationalCircuit) ⊗ 1 ⟶
-    ((ofNat 1 : CombinationalCircuit) ⊗ 1) ⊗ (1 ⊗ 1) :=
-  (CircuitCategory.fork ⊗ₘ CircuitCategory.fork) ≫ copyPairBraiding
+def xor : (ofNat 2 : CombinationalCircuit) ⟶ 1 := copy ≫ (and ⊗ₘ or) ≫ (not ⊗ₘ 𝟙 1) ≫ and
 
-def xor : (ofNat 1 : CombinationalCircuit) ⊗ 1 ⟶ 1 :=
-  copyPair ≫ (and ⊗ₘ or) ≫ (not ⊗ₘ 𝟙 (ofNat 1 : CombinationalCircuit)) ≫ and
-
-def halfAdder : (ofNat 1 : CombinationalCircuit) ⊗ 1 ⟶ 1 ⊗ 1 := copyPair ≫ (xor ⊗ₘ and)
+def halfAdder : (ofNat 2 : CombinationalCircuit) ⟶ 2 := copy ≫ (xor ⊗ₘ and)
 
 end CombinationalCircuit
 

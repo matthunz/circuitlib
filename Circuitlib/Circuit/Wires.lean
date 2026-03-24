@@ -37,4 +37,9 @@ lemma Wires.get_ofFn :
   intro n α f i
   simp only [Vector.get, Vector.toArray_ofFn, Array.getElem_ofFn]; congr 1
 
+@[simp]
+lemma Wires.get_cast {n m : ℕ} (h : n = m) (v : Wires V n) (i : Fin m) :
+    (v.cast h).get i = v.get ⟨i.val, h ▸ i.isLt⟩ := by
+  subst h; rfl
+
 end Circuit

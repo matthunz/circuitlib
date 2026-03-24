@@ -178,7 +178,8 @@ def tensorHom
   ⟨tensorHomVal f g, tensorHom_monotone f g⟩
 
 @[simp]
-def iso (h : n = m) :
+def iso
+    (h : n = m) :
     CombinationalCircuitCategory.of V G n ≅ CombinationalCircuitCategory.of V G m :=
   { hom := ⟨(·.cast h), fun _ _ hab i => hab (i.cast h.symm)⟩
     inv := ⟨(·.cast h.symm), fun _ _ hab i => hab (i.cast h)⟩
@@ -420,14 +421,14 @@ instance : MonoidalCategory.{v} (CombinationalCircuitCategory V G) where
 @[simp]
 def braiding_hom (X Y : CombinationalCircuitCategory V G) : tensorObj X Y ⟶ tensorObj Y X :=
   ⟨fun v => Vector.ofFn fun i =>
-      if h : i.val < Y.obj
-      then v.get ⟨X.obj + i.val,
-        by change X.obj + i.val < X.obj + Y.obj; omega⟩
-      else v.get ⟨i.val - Y.obj, by
-        have : i.val < Y.obj + X.obj := i.isLt
-        change i.val - Y.obj < X.obj + Y.obj; omega⟩,
-      fun a b hab i => by
-        simp only [Wires.get_ofFn]; split <;> exact hab _⟩
+    if h : i.val < Y.obj
+    then v.get ⟨X.obj + i.val,
+      by change X.obj + i.val < X.obj + Y.obj; omega⟩
+    else v.get ⟨i.val - Y.obj, by
+      have : i.val < Y.obj + X.obj := i.isLt
+      change i.val - Y.obj < X.obj + Y.obj; omega⟩,
+    fun a b hab i => by
+      simp only [Wires.get_ofFn]; split <;> exact hab _⟩
 
 @[simp]
 lemma hom_inv_id
@@ -436,7 +437,7 @@ lemma hom_inv_id
   apply Subtype.ext; funext v; apply Wires.ext; intro i
   have hi : i.val < X.obj + Y.obj := i.isLt
   simp only [CategoryStruct.comp, Function.comp, CategoryStruct.id, Hom.id,
-              braiding_hom, Wires.get_ofFn]
+             braiding_hom, Wires.get_ofFn]
   split <;> split <;>
     first | (simp only [] at *; omega)
           | exact congrArg v.get (Fin.ext (by simp only []; omega))
@@ -449,8 +450,10 @@ def braiding (X Y : CombinationalCircuitCategory V G) : tensorObj X Y ≅ tensor
     inv_hom_id := hom_inv_id }
 
 @[simp]
-lemma braiding_get (X Y : CombinationalCircuitCategory V G)
-    (v : Wires V (X.obj + Y.obj)) (i : Fin (Y.obj + X.obj)) :
+lemma braiding_get
+    (X Y : CombinationalCircuitCategory V G)
+    (v : Wires V (X.obj + Y.obj))
+    (i : Fin (Y.obj + X.obj)) :
     ((braiding X Y).hom.val v).get i =
       if h : i.val < Y.obj
       then v.get ⟨X.obj + i.val, by omega⟩
@@ -458,7 +461,8 @@ lemma braiding_get (X Y : CombinationalCircuitCategory V G)
   unfold braiding braiding_hom; simp only [Wires.get_ofFn]
 
 @[simp]
-lemma braiding_get_castAdd (X Y : CombinationalCircuitCategory V G)
+lemma braiding_get_castAdd
+    (X Y : CombinationalCircuitCategory V G)
     (v : Wires V (X.obj + Y.obj)) (j : Fin Y.obj) :
     ((braiding X Y).hom.val v).get (Fin.castAdd X.obj j) =
     v.get (Fin.natAdd X.obj j) := by
@@ -466,7 +470,8 @@ lemma braiding_get_castAdd (X Y : CombinationalCircuitCategory V G)
   exact congrArg v.get (Fin.ext (by simp [Fin.val_natAdd]))
 
 @[simp]
-lemma braiding_get_natAdd (X Y : CombinationalCircuitCategory V G)
+lemma braiding_get_natAdd
+    (X Y : CombinationalCircuitCategory V G)
     (v : Wires V (X.obj + Y.obj)) (j : Fin X.obj) :
     ((braiding X Y).hom.val v).get (Fin.natAdd Y.obj j) =
     v.get (Fin.castAdd Y.obj j) := by
@@ -474,20 +479,16 @@ lemma braiding_get_natAdd (X Y : CombinationalCircuitCategory V G)
              dif_neg (show ¬(Y.obj + j.val < Y.obj) from by omega)]
   exact congrArg v.get (Fin.ext (by simp [Fin.val_castAdd]))
 
-omit [SemilatticeSup V] in
 @[simp]
-lemma Wires.get_cast {n m : ℕ} (h : n = m) (v : Wires V n) (i : Fin m) :
-    (v.cast h).get i = v.get ⟨i.val, h ▸ i.isLt⟩ := by
-  subst h; rfl
-
-@[simp]
-lemma associator_hom_val (X Y Z : CombinationalCircuitCategory V G)
+lemma associator_hom_val
+    (X Y Z : CombinationalCircuitCategory V G)
     (w : Wires V ((X.obj + Y.obj) + Z.obj)) :
     (MonoidalCategoryStruct.associator X Y Z).hom.val w =
     w.cast (Nat.add_assoc X.obj Y.obj Z.obj) := rfl
 
 @[simp]
-lemma associator_inv_val (X Y Z : CombinationalCircuitCategory V G)
+lemma associator_inv_val
+    (X Y Z : CombinationalCircuitCategory V G)
     (w : Wires V (X.obj + (Y.obj + Z.obj))) :
     (MonoidalCategoryStruct.associator X Y Z).inv.val w =
     w.cast (Nat.add_assoc X.obj Y.obj Z.obj).symm := rfl
@@ -604,7 +605,7 @@ lemma hexagon_reverse
 lemma symmetry
     (X Y : CombinationalCircuitCategory V G) :
     (X.braiding Y).hom ≫ (Y.braiding X).hom =
-    𝟙 (MonoidalCategoryStruct.tensorObj X Y) := by
+    𝟙 (tensorObj X Y) := by
   apply Subtype.ext; funext v; apply Wires.ext; intro i
   simp only [CategoryStruct.comp, Function.comp, CategoryStruct.id, Hom.id, braiding_get]
   split <;> split <;>
