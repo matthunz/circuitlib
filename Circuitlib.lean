@@ -4,5 +4,5 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Matt Hunzinger
 -/
 
-import Circuitlib.Circuit.Category
+import Circuitlib.Circuit.Combinational
 import Circuitlib.Circuit.Belnap.Gate
