@@ -5,4 +5,3 @@ Authors: Matt Hunzinger
 -/
 
 import Circuitlib.Circuit.Combinational
-import Circuitlib.Circuit.Belnap.Gate

@@ -26,9 +26,9 @@ open OfNat
 
 /-- A category of circuits. -/
 class CircuitCategory
-    (V : Type*)
+    (V : outParam Type*)
     [Preorder V]
-    (G : Type*)
+    (G : outParam Type*)
     [Gate V G]
     (C : Type u)
     [∀ n, OfNat C n]
