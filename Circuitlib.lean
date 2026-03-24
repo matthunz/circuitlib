@@ -5,4 +5,4 @@ Authors: Matt Hunzinger
 -/
 
 import Circuitlib.Circuit.Category
-import Circuitlib.Circuit.Belnap.Level
+import Circuitlib.Circuit.Belnap.Gate

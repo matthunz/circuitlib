@@ -6,7 +6,6 @@ Authors: Matt Hunzinger
 
 module
 
-public import Circuitlib.Circuit.Gate
 public import Mathlib.Order.WithBotTop
 
 @[expose] public section
