@@ -1,0 +1,37 @@
+name: Update Dependencies
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-for-updates:
+    runs-on: ubuntu-latest
+    outputs:
+      is-update-available: ${{ steps.check-for-updates.outputs.is-update-available }}
+      new-tags: ${{ steps.check-for-updates.outputs.new-tags }}
+    steps:
+      - name: Run the action
+        id: check-for-updates
+        uses: leanprover-community/mathlib-update-action@v1
+  do-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    needs: check-for-updates
+    if: ${{ needs.check-for-updates.outputs.is-update-available == 'true' }}
+    strategy:
+      max-parallel: 1
+      matrix:
+        tag: ${{ fromJSON(needs.check-for-updates.outputs.new-tags) }}
+    steps:
+      - name: Run the action
+        id: update-the-repo
+        uses: leanprover-community/mathlib-update-action/do-update@v1
+        with:
+          tag: ${{ matrix.tag }}
+          on_update_succeeds: pr
+          on_update_fails: issue
