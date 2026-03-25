@@ -34,7 +34,7 @@ instance : Bot BelnapLevel where
 instance : Top BelnapLevel where
   top := .some .none
 
-@[simp]
+@[inline, simp]
 def le : BelnapLevel → BelnapLevel → Prop
   | ⊥, _ => true
   | _, ⊤ => true
@@ -42,7 +42,7 @@ def le : BelnapLevel → BelnapLevel → Prop
   | _, _ => false
 
 @[simp]
-def le_refl : ∀ (a : BelnapLevel), a.le a := by
+lemma le_refl : ∀ (a : BelnapLevel), a.le a := by
   intro a
   cases a with
   | none => trivial
@@ -52,7 +52,7 @@ def le_refl : ∀ (a : BelnapLevel), a.le a := by
     | coe b => cases b <;> trivial
 
 @[simp]
-def le_trans : ∀ (a b c : BelnapLevel), a.le b → b.le c → a.le c := by
+lemma le_trans : ∀ (a b c : BelnapLevel), a.le b → b.le c → a.le c := by
   intro a b c hab hbc
   cases a with
   | none => trivial
@@ -85,7 +85,7 @@ instance : Preorder BelnapLevel where
   le_trans
 
 @[simp]
-def le_antisymm : ∀ (a b : BelnapLevel), a ≤ b → b ≤ a → a = b := by
+lemma le_antisymm : ∀ (a b : BelnapLevel), a ≤ b → b ≤ a → a = b := by
   intro a b hab hba
   cases a with
   | none =>
@@ -134,7 +134,7 @@ def le_sup_left : ∀ (a b : BelnapLevel), a ≤ a.sup b:= by
         | coe bv => cases av <;> cases bv <;> trivial
 
 @[simp]
-def le_sup_right : ∀ (a b : BelnapLevel), b ≤ a.sup b := by
+lemma le_sup_right : ∀ (a b : BelnapLevel), b ≤ a.sup b := by
   intro a b
   cases a with
   | none => trivial
@@ -153,7 +153,7 @@ def le_sup_right : ∀ (a b : BelnapLevel), b ≤ a.sup b := by
         | coe bv => cases av <;> cases bv <;> trivial
 
 @[simp]
-def sup_le : ∀ (a b c : BelnapLevel), a ≤ c → b ≤ c → a.sup b ≤ c  := by
+lemma sup_le : ∀ (a b c : BelnapLevel), a ≤ c → b ≤ c → a.sup b ≤ c  := by
   intro a b c hac hbc
   cases a with
   | none => exact hbc
@@ -182,6 +182,7 @@ instance : SemilatticeSup BelnapLevel where
   sup_le
 
 /-- Logical AND. -/
+@[inline]
 def and (a b : BelnapLevel) : BelnapLevel := match a, b with
   | .some (.some false), _ => false
   | _, .some (.some false) => false
@@ -192,6 +193,7 @@ def and (a b : BelnapLevel) : BelnapLevel := match a, b with
   | _, _ => false
 
 /-- Logical OR. -/
+@[inline]
 def or (a b : BelnapLevel) : BelnapLevel := match a, b with
   | .some (.some true), _ => true
   | _, .some (.some true) => true
@@ -202,6 +204,7 @@ def or (a b : BelnapLevel) : BelnapLevel := match a, b with
   | _, _ => true
 
 /-- Logical NOT. -/
+@[inline]
 def not : BelnapLevel → BelnapLevel
   | .some (.some b) => !b
   | x => x
