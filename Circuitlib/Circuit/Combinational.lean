@@ -22,7 +22,6 @@ public import Circuitlib.Circuit.Basic
 
 namespace Circuit
 
-open CircuitCategory
 open CategoryTheory
 open MonoidalCategory
 open OfNat
@@ -34,30 +33,35 @@ namespace CombinationalCircuit
 abbrev and := Circuit.and (C:=CombinationalCircuit)
 
 @[simp]
-lemma and_eq (x y : Bool) : and.val #v[↑x, ↑y] = #v[↑(x && y)] := by
-  cases x <;> cases y <;> rfl
+lemma and_def (x y : Bool) : and.val #v[↑x, ↑y] = #v[↑(x && y)] := by cases x <;> cases y <;> rfl
 
 abbrev or := Circuit.or (C:=CombinationalCircuit)
 
 @[simp]
-lemma or_eq (x y : Bool) : or.val #v[↑x, ↑y] = #v[↑(x || y)] := by
-  cases x <;> cases y <;> rfl
+lemma or_def (x y : Bool) : or.val #v[↑x, ↑y] = #v[↑(x || y)] := by cases x <;> cases y <;> rfl
 
 abbrev not := Circuit.not (C:=CombinationalCircuit)
 
 @[simp]
-lemma not_eq (x : Bool) : not.val #v[↑x] = #v[↑(!x)] := by
-  cases x <;> rfl
+lemma not_def (x : Bool) : not.val #v[↑x] = #v[↑(!x)] := by cases x <;> rfl
+
+abbrev nand := Circuit.nand (C:=CombinationalCircuit)
 
 @[simp]
-lemma nand_eq (x y : Bool) : nand (C:=CombinationalCircuit).val #v[↑x, ↑y] = #v[↑!((x && y))] := by
+lemma nand_def (x y : Bool) : nand.val #v[↑x, ↑y] = #v[↑!((x && y))] := by
   cases x <;> cases y <;> rfl
+
+abbrev nor := Circuit.nor (C:=CombinationalCircuit)
 
 @[simp]
-lemma nor_eq (x y : Bool) : nor (C:=CombinationalCircuit).val #v[↑x, ↑y] = #v[↑(!(x || y))] := by
-  cases x <;> cases y <;> rfl
+lemma nor_def (x y : Bool) : nor.val #v[↑x, ↑y] = #v[↑(!(x || y))] := by cases x <;> cases y <;> rfl
 
-def copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
+abbrev fork := CircuitCategory.fork (C:=CombinationalCircuit)
+
+@[simp]
+lemma fork_def (x : Bool) : fork.val #v[↑x] = #v[↑x, ↑x] := by cases x <;> rfl
+
+abbrev copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
   (fork ⊗ₘ fork) ≫
   (α_ 1 1 2).hom ≫
   (1 ◁ (α_ 1 1 1).inv) ≫

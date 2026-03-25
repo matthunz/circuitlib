@@ -35,21 +35,16 @@ variable
   [MonoidalCategory C]
   [CircuitCategory BelnapLevel BelnapGate C]
 
-@[simp]
-def and : (ofNat 2 : C) ⟶ 1 := CircuitCategory.gate BelnapGate.and
+abbrev and : (ofNat 2 : C) ⟶ 1 := CircuitCategory.gate BelnapGate.and
 
-@[simp]
-def or : (ofNat 2 : C) ⟶ 1 := CircuitCategory.gate BelnapGate.or
+abbrev or : (ofNat 2 : C) ⟶ 1 := CircuitCategory.gate BelnapGate.or
 
-@[simp]
-def not : (ofNat 1 : C) ⟶ 1 := CircuitCategory.gate BelnapGate.not
+abbrev not : (ofNat 1 : C) ⟶ 1 := CircuitCategory.gate BelnapGate.not
 
 open MonoidalCategory
 
-@[simp]
-def nand : (ofNat 2 : C) ⟶ 1 := and ≫ not
+abbrev nand : (ofNat 2 : C) ⟶ 1 := and ≫ not
 
-@[simp]
-def nor : (ofNat 2 : C) ⟶ 1 := or ≫ not
+abbrev nor : (ofNat 2 : C) ⟶ 1 := or ≫ not
 
 end Circuit
