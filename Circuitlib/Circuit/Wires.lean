@@ -32,6 +32,7 @@ instance [Preorder V] : Preorder (Wires V I) where
 lemma Wires.ext : ∀ {n} {a b : Wires V n}, (∀ i : Fin n, a.get i = b.get i) → a = b := by
   intro n a b h; apply Vector.ext; intro i hi; exact h ⟨i, hi⟩
 
+@[simp]
 lemma Wires.get_ofFn :
     ∀ {n : ℕ} {α : Type u} (f : Fin n → α) (i : Fin n), (Vector.ofFn f).get i = f i := by
   intro n α f i

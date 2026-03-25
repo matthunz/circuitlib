@@ -29,4 +29,6 @@ class Gate (V : outParam Type*) [Preorder V] (G : Type*) where
   gate (g : G) : Wires V (inputs g) → Wires V (outputs g)
   gate_monotone (g : G) : Monotone (gate g)
 
+attribute [simp] Gate.gate_monotone
+
 end Circuit

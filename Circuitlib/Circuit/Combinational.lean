@@ -56,13 +56,21 @@ abbrev nor := Circuit.nor (C:=CombinationalCircuit)
 @[simp]
 lemma nor_def (x y : Bool) : nor.val #v[↑x, ↑y] = #v[↑(!(x || y))] := by cases x <;> cases y <;> rfl
 
-abbrev fork := CircuitCategory.fork (C:=CombinationalCircuit)
+@[simp]
+def fork := CircuitCategory.fork (C:=CombinationalCircuit)
 
 @[simp]
 lemma fork_def (x : Bool) : fork.val #v[↑x] = #v[↑x, ↑x] := by cases x <;> rfl
 
-abbrev copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
-  (fork ⊗ₘ fork) ≫
+@[simp]
+def fork₂ := fork ⊗ₘ fork
+
+@[simp]
+lemma fork₂_def (x y : Bool) : fork₂.val #v[↑x, ↑y] = #v[↑x, ↑x, ↑y, ↑y] :=
+  by cases x <;> cases y <;> simp <;> rfl
+
+def copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
+  fork₂ ≫
   (α_ 1 1 2).hom ≫
   (1 ◁ (α_ 1 1 1).inv) ≫
   (1 ◁ ((β_ 1 1).hom ▷ 1)) ≫
