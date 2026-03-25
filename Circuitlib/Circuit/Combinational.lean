@@ -31,6 +31,32 @@ abbrev CombinationalCircuit := CombinationalCircuitCategory BelnapLevel BelnapGa
 
 namespace CombinationalCircuit
 
+abbrev and := Circuit.and (C:=CombinationalCircuit)
+
+@[simp]
+lemma and_eq (x y : Bool) : and.val #v[↑x, ↑y] = #v[↑(x && y)] := by
+  cases x <;> cases y <;> rfl
+
+abbrev or := Circuit.or (C:=CombinationalCircuit)
+
+@[simp]
+lemma or_eq (x y : Bool) : or.val #v[↑x, ↑y] = #v[↑(x || y)] := by
+  cases x <;> cases y <;> rfl
+
+abbrev not := Circuit.not (C:=CombinationalCircuit)
+
+@[simp]
+lemma not_eq (x : Bool) : not.val #v[↑x] = #v[↑(!x)] := by
+  cases x <;> rfl
+
+@[simp]
+lemma nand_eq (x y : Bool) : nand (C:=CombinationalCircuit).val #v[↑x, ↑y] = #v[↑!((x && y))] := by
+  cases x <;> cases y <;> rfl
+
+@[simp]
+lemma nor_eq (x y : Bool) : nor (C:=CombinationalCircuit).val #v[↑x, ↑y] = #v[↑(!(x || y))] := by
+  cases x <;> cases y <;> rfl
+
 def copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
   (fork ⊗ₘ fork) ≫
   (α_ 1 1 2).hom ≫

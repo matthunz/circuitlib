@@ -46,8 +46,10 @@ def not : (ofNat 1 : C) ⟶ 1 := CircuitCategory.gate BelnapGate.not
 
 open MonoidalCategory
 
-def nand : (ofNat 2 : C) ⊗ 1 ⟶ 1 ⊗ 1 := and ⊗ₘ not
+@[simp]
+def nand : (ofNat 2 : C) ⟶ 1 := and ≫ not
 
-def nor : (ofNat 2 : C) ⊗ 1 ⟶ 1 ⊗ 1 := or ⊗ₘ not
+@[simp]
+def nor : (ofNat 2 : C) ⟶ 1 := or ≫ not
 
 end Circuit
