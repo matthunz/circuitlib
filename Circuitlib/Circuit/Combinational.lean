@@ -78,9 +78,37 @@ def copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
   (1 ◁ (α_ 1 1 1).hom) ≫
   (α_ 1 1 2).inv
 
+@[simp]
+lemma copy_def : copy.val #v[↑true, ↑false] = #v[↑true, ↑false, ↑true, ↑false] := rfl
+
 def xor : (ofNat 2 : CombinationalCircuit) ⟶ 1 := copy ≫ (and ⊗ₘ or) ≫ (not ⊗ₘ 𝟙 1) ≫ and
 
+@[simp]
+lemma xor_def (x y : Bool) : xor.val #v[↑x, ↑y] = #v[↑((x && !y) || (!x && y))] :=
+  by cases x <;> cases y <;> rfl
+
 def halfAdder : (ofNat 2 : CombinationalCircuit) ⟶ 2 := copy ≫ (xor ⊗ₘ and)
+
+@[simp]
+lemma halfAdder_def
+    (x y : Bool) :
+    halfAdder.val #v[↑x, ↑y] = #v[↑((x && !y) || (!x && y)), ↑(x && y)] :=
+  by cases x <;> cases y <;> rfl
+
+def adder : (ofNat 3 : CombinationalCircuit) ⟶ 2 :=
+  (halfAdder ⊗ₘ 𝟙 1) ≫
+  (α_ 1 1 1).hom ≫
+  (1 ◁ (β_ 1 1).hom) ≫
+  (α_ 1 1 1).inv ≫
+  (halfAdder ⊗ₘ 𝟙 1) ≫
+  (𝟙 1 ⊗ₘ or)
+
+@[simp]
+lemma adder_def (x y z : Bool) :
+    adder.val #v[↑x, ↑y, ↑z] =
+      #v[↑((((x && !y) || (!x && y)) && !z) || (!(((x && !y) || (!x && y))) && z)),
+         ↑((x && y) || (((x && !y) || (!x && y)) && z))] := by
+  cases x <;> cases y <;> cases z <;> rfl
 
 end CombinationalCircuit
 

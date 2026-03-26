@@ -20,7 +20,7 @@ A circuit verification library for Lean4.
   - [ ] XNOR Gate
 - Arithmetic Circuits
   - [x] Half Adder
-  - [ ] Full Adder
+  - [x] Full Adder
   - [ ] Ripple Carry Adder
   - [ ] Carry Lookahead Adder
   - [ ] Half Subtractor
