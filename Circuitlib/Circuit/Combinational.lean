@@ -69,6 +69,7 @@ def fork₂ := fork ⊗ₘ fork
 lemma fork₂_def (x y : Bool) : fork₂.val #v[↑x, ↑y] = #v[↑x, ↑x, ↑y, ↑y] :=
   by cases x <;> cases y <;> simp <;> rfl
 
+@[simp]
 def copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
   fork₂ ≫
   (α_ 1 1 2).hom ≫

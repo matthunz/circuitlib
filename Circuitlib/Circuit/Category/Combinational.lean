@@ -42,7 +42,7 @@ def Hom (V : Type v) [Preorder V] (I O : CombinationalCircuitCategory V G) :=
   { f : Wires V I.obj → Wires V O.obj // Monotone f }
 
 @[inline, simp]
-abbrev id_val : Wires V n → Wires V n := fun x => x
+def id_val : Wires V n → Wires V n := fun x => x
 
 @[simp]
 lemma id_monotone [Preorder V] : Monotone (id_val (V:=V) (n:=n)) := monotone_id
@@ -68,7 +68,7 @@ def drop (_ : Wires V 1) : Wires V 0 := #v[]
 lemma drop_monotone [Preorder V] : Monotone (drop (V:=V)) := fun _ _ _ => le_refl _
 
 @[inline, simp]
-abbrev fork (w : Wires V 1) : Wires V 2 := #v[w.get 0, w.get 0]
+def fork (w : Wires V 1) : Wires V 2 := #v[w.get 0, w.get 0]
 
 @[simp]
 lemma fork_monotone [Preorder V] : Monotone (fork (V:=V)) := fun _ _ h i => by
@@ -87,15 +87,31 @@ lemma join_monotone [SemilatticeSup V] : Monotone (join (V:=V)) := fun _ _ h i =
 abbrev tensorObj (X Y : CombinationalCircuitCategory V G) : CombinationalCircuitCategory V G :=
   .of V G (X.obj + Y.obj)
 
-variable [SemilatticeSup V]
-
 @[inline, simp]
-instance [Gate V G] [Bot V] : CircuitCategory V G (CombinationalCircuitCategory V G) where
+instance
+    [SemilatticeSup V]
+    [Gate V G]
+    [Bot V] :
+    CircuitCategory V G (CombinationalCircuitCategory V G) where
   gate g := ⟨Gate.gate g, Gate.gate_monotone g⟩
   stub := ⟨fun _ => #v[⊥], fun _ _ _ => le_refl _⟩
   drop := ⟨drop, drop_monotone⟩
   fork := ⟨fork, fork_monotone⟩
   join := ⟨join, join_monotone⟩
+
+@[simp]
+lemma tensorHom_val_add
+    {X₁ X₂ : CombinationalCircuitCategory V G} :
+    min X₁.obj (X₁.obj + X₂.obj) = X₁.obj :=
+  by simp
+
+@[simp]
+lemma tensorHom_val_sub
+    {X₁ X₂ : CombinationalCircuitCategory V G} :
+    X₁.obj + X₂.obj - X₁.obj = X₂.obj :=
+  by simp
+
+variable [SemilatticeSup V]
 
 @[inline, simp]
 abbrev tensorHom_val
@@ -104,8 +120,8 @@ abbrev tensorHom_val
     (g : X₂ ⟶ Y₂)
     (v : Wires V (X₁.obj + X₂.obj)) :
     Wires V (Y₁.obj + Y₂.obj) :=
-  (f.val (Vector.ofFn (fun i => v.get (i.castAdd _)))).append
-    (g.val (Vector.ofFn (fun i => v.get (i.natAdd _))))
+  (f.val ((v.take X₁.obj).cast tensorHom_val_add )).append
+    (g.val ((v.drop X₁.obj).cast tensorHom_val_sub))
 
 @[simp]
 lemma tensorHom_eq
@@ -114,6 +130,16 @@ lemma tensorHom_eq
     (f : X₁ ⟶ Y₁) :
     (f.val (Vector.ofFn fun i ↦ Vector.get a (Fin.castAdd X₂.obj i))).toArray.size = Y₁.obj :=
   (f.val (Vector.ofFn (fun i => a.get (i.castAdd _)))).size_toArray
+
+omit [SemilatticeSup V] in
+@[simp]
+lemma tensorHom_take
+    {X₁ X₂ : CombinationalCircuitCategory V G}
+    (a : Wires V (X₁.obj + X₂.obj)) :
+    (a.take X₁.obj).cast tensorHom_val_add =
+    Vector.ofFn fun i => a.get (Fin.castAdd X₂.obj i) := by
+  apply Wires.ext; intro i
+  simp [Vector.get]
 
 @[simp]
 lemma tensorHom_eq_left
@@ -124,8 +150,9 @@ lemma tensorHom_eq_left
     (g : X₂ ⟶ Y₂) :
     (tensorHom_val f g a).get (Fin.castAdd Y₂.obj j) =
     Vector.get (f.val (Vector.ofFn fun i => Vector.get a (Fin.castAdd X₂.obj i))) j := by
+  have htake := tensorHom_take a
   have hf := tensorHom_eq a f
-  simp only [Vector.get, Vector.append, Fin.val_cast, Fin.val_castAdd] at hf ⊢
+  simp only [htake, Vector.get, Vector.append, Fin.val_cast, Fin.val_castAdd] at hf ⊢
   exact Array.getElem_append_left (by omega)
 
 @[simp]
@@ -137,10 +164,35 @@ lemma tensorHom_eq_right
     (g : X₂ ⟶ Y₂) :
     (tensorHom_val f g a).get (Fin.natAdd Y₁.obj j) =
     Vector.get (g.val (Vector.ofFn fun i => Vector.get a (Fin.natAdd X₁.obj i))) j := by
+  have htake : (a.take X₁.obj).cast tensorHom_val_add =
+    Vector.ofFn fun i => a.get (Fin.castAdd X₂.obj i) := by
+    apply Wires.ext; intro i
+    simp [Vector.get, Vector.take, Fin.val_castAdd]
+  have hdrop : (a.drop X₁.obj).cast tensorHom_val_sub =
+    Vector.ofFn fun i => a.get (Fin.natAdd X₁.obj i) := by
+    apply Wires.ext; intro i
+    simp [Vector.get, Vector.drop, Fin.val_natAdd]
   have hf := tensorHom_eq a f
-  simp only [Vector.get, Vector.append, Fin.val_cast, Fin.val_castAdd, Fin.val_natAdd] at hf ⊢
+  simp only [htake, hdrop, Vector.get, Vector.append,
+    Fin.val_cast, Fin.val_castAdd, Fin.val_natAdd] at hf ⊢
   rw [Array.getElem_append_right (by omega)]
   congr 1; omega
+
+@[simp]
+lemma tensorHom_get
+    {X₁ Y₁ X₂ Y₂ : CombinationalCircuitCategory V G}
+    (f : X₁ ⟶ Y₁) (g : X₂ ⟶ Y₂) (w : Wires V (X₁.obj + X₂.obj))
+    (i : Fin (Y₁.obj + Y₂.obj)) :
+    (tensorHom_val f g w).get i =
+    if h : i.val < Y₁.obj
+    then (f.val (Vector.ofFn fun k => w.get (Fin.castAdd X₂.obj k))).get ⟨i.val, h⟩
+    else (g.val (Vector.ofFn fun k => w.get (Fin.natAdd X₁.obj k))).get
+      ⟨i.val - Y₁.obj, by omega⟩ := by
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp only [tensorHom_eq_left, Fin.val_castAdd, dif_pos j.isLt]
+  · simp only [tensorHom_eq_right, Fin.val_natAdd,
+               dif_neg (show ¬(Y₁.obj + j.val < Y₁.obj) from by omega)]
+    congr 1; exact Fin.ext (by simp)
 
 @[simp]
 lemma tensorHom_monotone
@@ -208,7 +260,7 @@ lemma iso_inv_hom_id
   apply Subtype.ext; funext v; rfl
 
 @[inline, simp]
-abbrev iso
+def iso
     (h : n = m) :
     CombinationalCircuitCategory.of V G n ≅ CombinationalCircuitCategory.of V G m :=
   { hom := iso_hom h
@@ -226,9 +278,9 @@ lemma whisker
   apply Wires.ext; intro i
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · rw [tensorHom_eq_left v j (𝟙 X) (𝟙 Y)]
-    simp only [CategoryStruct.id, id]; rw [Wires.get_ofFn]
+    simp only [CategoryStruct.id, id]; rw [id_val, Wires.get_ofFn]
   · rw [tensorHom_eq_right v j (𝟙 X) (𝟙 Y)]
-    simp only [CategoryStruct.id, id]; rw [Wires.get_ofFn]
+    simp only [CategoryStruct.id, id]; rw [id_val, Wires.get_ofFn]
 
 @[inline, simp]
 abbrev whiskerLeft
@@ -255,7 +307,7 @@ lemma tensorHom_def
   apply Wires.ext; intro i
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · rw [tensorHom_eq_left v j f g, tensorHom_eq_left _ j id g]
-    simp only [id]; rw [Wires.get_ofFn]
+    simp only [id]; rw [id_val, Wires.get_ofFn]
     exact (tensorHom_eq_left v j f id).symm
   · rw [tensorHom_eq_right v j f g, tensorHom_eq_right _ j id g]
     simp only [id]
@@ -274,9 +326,9 @@ lemma id_tensorHom_id
   apply Wires.ext; intro i
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · rw [tensorHom_eq_left v j (𝟙 X₁) (𝟙 X₂)]
-    simp only [CategoryStruct.id, id]; rw [Wires.get_ofFn]
+    simp only [CategoryStruct.id, id]; rw [id_val, Wires.get_ofFn]
   · rw [tensorHom_eq_right v j (𝟙 X₁) (𝟙 X₂)]
-    simp only [CategoryStruct.id, id]; rw [Wires.get_ofFn]
+    simp only [CategoryStruct.id, id]; rw [id_val, Wires.get_ofFn]
 
 @[simp]
 lemma tensorHom_comp_tensorHom
@@ -304,8 +356,8 @@ lemma tensorHom_comp_tensorHom
         conv_lhs => rw [Wires.get_ofFn]
         exact tensorHom_eq_right v k f₁ f₂))
 
-@[simp]
-abbrev tensorUnit : CombinationalCircuitCategory V G := .of V G 0
+@[inline, simp]
+def tensorUnit : CombinationalCircuitCategory V G := .of V G 0
 
 omit [SemilatticeSup V] in
 @[simp]
@@ -315,7 +367,7 @@ lemma associator_eq
   Nat.add_assoc X.obj Y.obj Z.obj
 
 @[inline, simp]
-abbrev associator
+def associator
     (X Y Z : CombinationalCircuitCategory V G) :
     (X.tensorObj Y).tensorObj Z ≅ X.tensorObj (Y.tensorObj Z) :=
   iso (associator_eq X Y Z)
@@ -329,11 +381,8 @@ lemma associator_naturality
     tensorHom (tensorHom f₁ f₂) f₃ ≫ (Y₁.associator Y₂ Y₃).hom =
       (X₁.associator X₂ X₃).hom ≫ tensorHom f₁ (tensorHom f₂ f₃) := by
   apply Subtype.ext; funext v; apply Vector.ext; intro i hi
-  simp only [Vector.get, CategoryStruct.comp, tensorHom_val, tensorHom,
-              Vector.cast, Vector.append, Vector.toArray_ofFn, Array.getElem_ofFn,
-              Fin.val_castAdd, Fin.val_natAdd, Fin.val_cast, Function.comp,
-              Array.append_assoc]
-  simp only [show (X₁ + X₂).obj = X₁.obj + X₂.obj from rfl, Nat.add_assoc]
+  simp only [CategoryStruct.comp, Function.comp, Vector.append, Vector.cast]
+  simp
 
 @[simp]
 lemma pentagon
@@ -343,33 +392,10 @@ lemma pentagon
       whiskerLeft W (X.associator Y Z).hom =
     ((W.tensorObj X).associator Y Z).hom ≫ (W.associator X (Y.tensorObj Z)).hom := by
   apply Subtype.ext; funext v; apply Vector.ext; intro i hi
-  simp only [id, CategoryStruct.id, tensorHom_val, tensorObj, Vector.get, CategoryStruct.comp,
-             Vector.cast, Vector.append, Vector.toArray_ofFn, Fin.val_castAdd, Fin.val_natAdd,
-             Fin.val_cast, Function.comp]
-  have vec_arr : ∀ {n} (v : Vector V n) (j : Nat) (hj : j < n),
-      v[j] = v.toArray[j]'(by rw [v.size_toArray]; exact hj) := fun _ _ _ => rfl
-  simp only [vec_arr]
-  have hWXY : (W.obj + X.obj + Y.obj) =
-      W.obj + X.obj + Y.obj := rfl
-  have hXYZ : (X.obj + (Y.obj + Z.obj)) =
-      X.obj + (Y.obj + Z.obj) := rfl
-  have hN : (CombinationalCircuitCategory.of V G (W.obj + (X.obj + (Y.obj + Z.obj)))).obj =
-      W.obj + (X.obj + (Y.obj + Z.obj)) := rfl
-  rcases Nat.lt_or_ge i W.obj with h₁ | h₁
-  · rw [Array.getElem_append_left
-          (by simp only [Vector.getElem_toArray, Array.size_ofFn]; exact h₁),
-        Array.getElem_ofFn,
-        Array.getElem_append_left (by simp [Array.size_ofFn]; omega),
-        Array.getElem_ofFn]
-  · rw [Array.getElem_append_right (by simp [Array.size_ofFn]; omega)]
-    simp only [Array.getElem_ofFn, Array.size_ofFn]
-    rcases Nat.lt_or_ge i (W.obj + X.obj + Y.obj) with h₂ | h₂
-    · rw [Array.getElem_append_left (by simp [Array.size_ofFn]; omega)]
-      simp only [Array.getElem_ofFn]
-      congr 1; omega
-    · rw [Array.getElem_append_right (by simp [Array.size_ofFn]; omega)]
-      simp only [Array.getElem_ofFn, Array.size_ofFn]
-      congr 1; omega
+  simp only [CategoryStruct.comp, Function.comp, Vector.append, Vector.cast]
+  simp [show W.obj + (X.obj + (Y.obj + Z.obj)) =
+    W.obj + (X.obj + Y.obj) + Z.obj from by omega,
+    show min W.obj (W.obj + (X.obj + Y.obj) + Z.obj) = W.obj from by omega]
 
 omit [SemilatticeSup V] in
 @[simp]
@@ -398,12 +424,8 @@ lemma leftUnitor_naturality
     {X Y : CombinationalCircuitCategory V G} (f : X ⟶ Y) :
     whiskerLeft tensorUnit f ≫ (leftUnitor Y).hom = (leftUnitor X).hom ≫ f := by
   apply Subtype.ext; funext v; apply Vector.ext; intro i hi
-  simp only [CategoryStruct.comp, Function.comp]
-  simp only [id, CategoryStruct.id, tensorUnit, Vector.get, tensorHom_val,
-            Vector.append, Vector.toArray_ofFn, Fin.val_castAdd, Fin.val_natAdd, Fin.val_cast]
-  simp only [Vector.getElem_toArray, Array.ofFn_zero, Array.empty_append]
-  exact congrArg (fun x => (f.val x).get ⟨i, hi⟩)
-    (by apply Vector.ext; intro j hj; simp)
+  simp only [iso, CategoryStruct.comp, Function.comp, Vector.append, Vector.cast]
+  simp
 
 @[simp]
 lemma rightUnitor_naturality
@@ -411,13 +433,9 @@ lemma rightUnitor_naturality
     (f : X ⟶ Y) :
     whiskerRight f tensorUnit ≫ (rightUnitor Y).hom = (rightUnitor X).hom ≫ f := by
   apply Subtype.ext; funext v; apply Vector.ext; intro i hi
-  simp only [CategoryStruct.comp, Function.comp]
-  simp only [id, CategoryStruct.id, tensorUnit, Vector.get, tensorHom_val,
-              Vector.append, Vector.toArray_ofFn,
-              Fin.val_castAdd, Fin.val_natAdd, Fin.val_cast, Nat.add_zero]
-  simp only [Vector.getElem_toArray, Array.ofFn_zero, Array.append_empty, Vector.mk_toArray]
-  exact congrArg (fun x => (f.val x).get ⟨i, hi⟩)
-    (by apply Vector.ext; intro j hj; simp)
+  simp only [CategoryStruct.comp, Function.comp, Vector.append, Vector.cast]
+  congr 1
+  simp
 
 open MonoidalCategory
 
@@ -427,25 +445,8 @@ lemma triangle
     (associator X tensorUnit Y).hom ≫ whiskerLeft X (leftUnitor Y).hom =
     whiskerRight (rightUnitor X).hom Y := by
   apply Subtype.ext; funext v; apply Vector.ext; intro i hi
-  simp only [id, CategoryStruct.id, tensorObj, Vector.get, CategoryStruct.comp, tensorHom_val,
-             Vector.cast, Vector.append, Vector.toArray_ofFn, Fin.val_castAdd, Fin.val_natAdd,
-             Fin.val_cast, Function.comp]
-  have vec_arr : ∀ {n} (v : Vector V n) (j : Nat) (hj : j < n),
-      v[j] = v.toArray[j]'(by rw [v.size_toArray]; exact hj) := fun _ _ _ => rfl
-  simp only [vec_arr]
-  have h0 : (CombinationalCircuitCategory.of V G 0).obj = 0 := rfl
-  have hX0 : (X.obj + ((CombinationalCircuitCategory.of V G 0).obj)) = X.obj + 0 := rfl
-  rcases Nat.lt_or_ge i X.obj with h₁ | h₁
-  · rw [Array.getElem_append_left
-          (by simp only [Vector.getElem_toArray, Array.size_ofFn]; exact h₁),
-        Array.getElem_ofFn,
-        Array.getElem_append_left (by simp [Array.size_ofFn]; omega),
-        Array.getElem_ofFn]
-  · rw [Array.getElem_append_right (by simp [Array.size_ofFn]; omega)]
-    simp only [Array.getElem_ofFn, Array.size_ofFn]
-    rw [Array.getElem_append_right (by simp [Array.size_ofFn]; omega)]
-    simp only [Array.getElem_ofFn, Array.size_ofFn]
-    congr 1
+  simp only [CategoryStruct.comp, Vector.append, Function.comp]
+  simp
 
 @[inline, simp]
 instance : MonoidalCategory.{v} (CombinationalCircuitCategory V G) where
@@ -468,47 +469,151 @@ instance : MonoidalCategory.{v} (CombinationalCircuitCategory V G) where
   pentagon
   triangle
 
+@[simp]
+lemma braiding_hom_eq
+    {X Y : CombinationalCircuitCategory V G} :
+    (X ⊗ Y).obj - X.obj + min X.obj (X ⊗ Y).obj = (Y ⊗ X).obj :=
+  by simp
+
 @[inline, simp]
-def braiding_hom (X Y : CombinationalCircuitCategory V G) : tensorObj X Y ⟶ tensorObj Y X :=
-  ⟨fun v => Vector.ofFn fun i =>
-    if h : i.val < Y.obj
-    then v.get ⟨X.obj + i.val,
-      by change X.obj + i.val < X.obj + Y.obj; omega⟩
-    else v.get ⟨i.val - Y.obj, by
-      have : i.val < Y.obj + X.obj := i.isLt
-      change i.val - Y.obj < X.obj + Y.obj; omega⟩,
-    fun a b hab i => by
-      simp only [Wires.get_ofFn]; split <;> exact hab _⟩
+abbrev braiding_hom_val
+    (X Y : CombinationalCircuitCategory V G)
+    (v : Wires V (X ⊗ Y).obj) :
+    Wires V (Y ⊗ X).obj :=
+  ((v.drop X.obj).append (v.take X.obj)).cast braiding_hom_eq
 
 @[simp]
-lemma hom_inv_id
+lemma braiding_hom_lt
+    {X Y : CombinationalCircuitCategory V G}
+    {j : Fin Y.obj} :
+    X.obj + ↑j < (X ⊗ Y).obj := by
+  change X.obj + j.val < X.obj + Y.obj
+  omega
+
+@[simp]
+lemma braiding_hom_ge
+    {X Y : CombinationalCircuitCategory V G}
+    {j : Fin X.obj} :
+    ↑j < (X ⊗ Y).obj := by
+  change j.val < X.obj + Y.obj
+  omega
+
+@[simp]
+lemma braiding_hom_monotone
     {X Y : CombinationalCircuitCategory V G} :
-    X.braiding_hom Y ≫ Y.braiding_hom X = 𝟙 (X.tensorObj Y) := by
-  apply Subtype.ext; funext v; apply Wires.ext; intro i
-  have hi : i.val < X.obj + Y.obj := i.isLt
-  simp only [CategoryStruct.comp, Function.comp, CategoryStruct.id, id,
-             braiding_hom, Wires.get_ofFn]
-  split <;> split <;>
-    first | (simp only [] at *; omega)
-          | exact congrArg v.get (Fin.ext (by simp only []; omega))
+    Monotone (X.braiding_hom_val Y) := fun a b hab i => by
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp only [Vector.get, Vector.cast, Vector.append, Vector.drop, instMonoidalCategory,
+               Vector.size_toArray, Fin.val_cast, Fin.val_castAdd, Array.size_extract, min_self,
+               Nat.add_sub_cancel_left, Fin.is_lt, Array.getElem_append_left, Array.getElem_extract]
+    exact hab ⟨X.obj + j.val, braiding_hom_lt⟩
+  · simp only [braiding_hom_val, instMonoidalCategory, Vector.get, Vector.cast, Vector.append,
+               Vector.drop, Vector.take, Vector.size_toArray, Fin.val_cast, Fin.val_natAdd,
+               Array.size_extract, min_self, Nat.add_sub_cancel_left, Nat.le_add_right,
+               Array.getElem_append_right, Array.getElem_extract, Nat.zero_add]
+    exact hab ⟨j.val, braiding_hom_ge⟩
 
 @[inline, simp]
-def braiding (X Y : CombinationalCircuitCategory V G) : tensorObj X Y ≅ tensorObj Y X :=
+def braiding_hom (X Y : CombinationalCircuitCategory V G) : X ⊗ Y ⟶ Y ⊗ X :=
+  ⟨braiding_hom_val X Y, braiding_hom_monotone⟩
+
+@[simp]
+lemma braiding_hom_inv_id
+    {X Y : CombinationalCircuitCategory V G} :
+    X.braiding_hom Y ≫ Y.braiding_hom X = 𝟙 (X ⊗ Y) := by
+  apply Subtype.ext; funext v
+  apply Wires.ext; intro i
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp [Vector.get, Vector.append]
+  · simp [Vector.get, Vector.append]
+
+@[inline, simp]
+def braiding (X Y : CombinationalCircuitCategory V G) : X ⊗ Y ≅ Y ⊗ X :=
   { hom := braiding_hom X Y
     inv := braiding_hom Y X
-    hom_inv_id
-    inv_hom_id := hom_inv_id }
+    hom_inv_id := braiding_hom_inv_id
+    inv_hom_id := braiding_hom_inv_id }
+
+@[simp]
+lemma braiding_naturality_left
+    {X Y : CombinationalCircuitCategory V G}
+    (f : X ⟶ Y)
+    (Z : CombinationalCircuitCategory V G) :
+    f ▷ Z ≫ (Y.braiding Z).hom = (braiding X Z).hom ≫ Z ◁ f := by
+  apply Subtype.ext; funext v; apply Wires.ext; intro i
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp [Vector.get, Vector.append]
+  · simp only [Vector.get, instCategoryOfPreorder, id, instMonoidalCategory, tensorUnit, tensorObj,
+               braiding, braiding_hom, braiding_hom_val, Function.comp_apply, Vector.append,
+               tensorHom_val, Vector.take_eq_extract, Vector.drop_eq_cast_extract,
+               Vector.toArray_extract, Vector.extract_mk, Array.extract_append,
+               Vector.size_toArray, Nat.sub_self, Nat.add_sub_cancel_left, min_self,
+               Vector.cast_mk, Nat.sub_zero, Nat.zero_le, Nat.sub_eq_zero_of_le,
+               Array.extract_zero, Array.append_empty, Array.append_assoc, Vector.drop_mk,
+               Fin.val_cast, Fin.val_natAdd, Array.size_extract, Nat.le_add_right, inf_of_le_right,
+               Array.getElem_append_right, Array.getElem_extract, Nat.zero_add,
+               Vector.getElem_toArray, whiskerLeft]
+    congr 1
+    exact congrArg f.val (Wires.ext (fun k => by simp [Vector.get]))
+
+@[simp]
+lemma braiding_eq
+    {X Y Z : CombinationalCircuitCategory V G}
+    {f : Y ⟶ Z}
+    {v : Wires V (X ⊗ Y).obj}
+    {j : Fin X.obj} :
+    Vector.get ((X ◁ f ≫ (X.braiding Z).hom).val v) (Fin.natAdd Z.obj j) =
+    Vector.get (((X.braiding Y).hom ≫ f ▷ X).val v) (Fin.natAdd Z.obj j) := by
+  simp [Vector.get, Vector.append]
+
+@[simp]
+lemma braiding_naturality_right
+    (X : CombinationalCircuitCategory V G)
+    {Y Z : CombinationalCircuitCategory V G}
+    (f : Y ⟶ Z) :
+    X ◁ f ≫ (X.braiding Z).hom = (braiding X Y).hom ≫ f ▷ X := by
+  apply Subtype.ext; funext v; apply Wires.ext; intro i
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp [Vector.get, Vector.append]
+    congr 1
+  · simp [Vector.get, Vector.append]
+
+omit [SemilatticeSup V] in
+@[simp]
+lemma braiding_add
+    {X Y : CombinationalCircuitCategory V G}
+    (h : ↑i < Y.obj) :
+    X.obj + ↑i < X.obj + Y.obj := by omega
+
+@[simp]
+lemma braiding_sub
+    {X Y : CombinationalCircuitCategory V G}
+    {i : Fin (Y ⊗ X).obj} :
+    ↑i - Y.obj < (X ⊗ Y).obj := by
+  have : i.val < Y.obj + X.obj := i.isLt
+  change i.val - Y.obj < X.obj + Y.obj
+  omega
+
+omit [SemilatticeSup V] in
+@[simp]
+lemma braiding_get_ge
+    {X Y : CombinationalCircuitCategory V G}
+    {j : Fin X.obj} :
+    ¬Y.obj + ↑j < Y.obj := by omega
 
 @[simp]
 lemma braiding_get
     (X Y : CombinationalCircuitCategory V G)
-    (v : Wires V (X.obj + Y.obj))
-    (i : Fin (Y.obj + X.obj)) :
-    ((braiding X Y).hom.val v).get i =
+    (v : Wires V (X ⊗ Y).obj)
+    (i : Fin (Y ⊗ X).obj) :
+    ((X.braiding Y).hom.val v).get i =
       if h : i.val < Y.obj
-      then v.get ⟨X.obj + i.val, by omega⟩
-      else v.get ⟨i.val - Y.obj, by omega⟩ := by
-  unfold braiding braiding_hom; simp only [Wires.get_ofFn]
+      then v.get ⟨X.obj + i.val, braiding_add h⟩
+      else v.get ⟨i.val - Y.obj, braiding_sub⟩ := by
+  unfold CombinationalCircuitCategory.braiding CombinationalCircuitCategory.braiding_hom
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp only [Fin.val_castAdd, dif_pos j.isLt]; simp [Vector.get, Vector.append]
+  · simp [Vector.get, Vector.append]
 
 @[simp]
 lemma braiding_get_castAdd
@@ -517,7 +622,7 @@ lemma braiding_get_castAdd
     ((braiding X Y).hom.val v).get (Fin.castAdd X.obj j) =
     v.get (Fin.natAdd X.obj j) := by
   simp only [braiding_get, Fin.val_castAdd, dif_pos j.isLt]
-  exact congrArg v.get (Fin.ext (by simp [Fin.val_natAdd]))
+  exact congrArg v.get (Fin.ext (by simp))
 
 @[simp]
 lemma braiding_get_natAdd
@@ -525,67 +630,20 @@ lemma braiding_get_natAdd
     (v : Wires V (X.obj + Y.obj)) (j : Fin X.obj) :
     ((braiding X Y).hom.val v).get (Fin.natAdd Y.obj j) =
     v.get (Fin.castAdd Y.obj j) := by
-  simp only [braiding_get, Fin.val_natAdd,
-             dif_neg (show ¬(Y.obj + j.val < Y.obj) from by omega)]
-  exact congrArg v.get (Fin.ext (by simp [Fin.val_castAdd]))
-
-@[simp]
-lemma tensorHomVal_get
-    {X₁ Y₁ X₂ Y₂ : CombinationalCircuitCategory V G}
-    (f : X₁ ⟶ Y₁) (g : X₂ ⟶ Y₂) (w : Wires V (X₁.obj + X₂.obj))
-    (i : Fin (Y₁.obj + Y₂.obj)) :
-    (tensorHom_val f g w).get i =
-    if h : i.val < Y₁.obj
-    then (f.val (Vector.ofFn fun k => w.get (Fin.castAdd X₂.obj k))).get ⟨i.val, h⟩
-    else (g.val (Vector.ofFn fun k => w.get (Fin.natAdd X₁.obj k))).get
-      ⟨i.val - Y₁.obj, by omega⟩ := by
-  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
-  · simp only [tensorHom_eq_left, Fin.val_castAdd, dif_pos j.isLt]
-  · simp only [tensorHom_eq_right, Fin.val_natAdd,
-               dif_neg (show ¬(Y₁.obj + j.val < Y₁.obj) from by omega)]
-    congr 1; exact Fin.ext (by simp)
-
-@[simp]
-lemma braiding_naturality_left
-    {X Y : CombinationalCircuitCategory V G}
-    (f : X ⟶ Y)
-    (Z : CombinationalCircuitCategory V G) :
-    whiskerRight f Z ≫ (Y.braiding Z).hom =
-    (braiding X Z).hom ≫ whiskerLeft Z f := by
-  apply Subtype.ext; funext v; apply Wires.ext; intro i
-  simp only [CategoryStruct.comp, Function.comp]
-  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
-  · simp only [braiding_get_castAdd, tensorHom_eq_left, tensorHom_eq_right]
-  · simp only [braiding_get_natAdd, tensorHom_eq_left, tensorHom_eq_right]
-
-@[simp]
-lemma braiding_naturality_right
-    (X : CombinationalCircuitCategory V G)
-    {Y Z : CombinationalCircuitCategory V G}
-    (f : Y ⟶ Z) :
-    whiskerLeft X f ≫ (X.braiding Z).hom =
-    (braiding X Y).hom ≫ whiskerRight f X := by
-  apply Subtype.ext; funext v; apply Wires.ext; intro i
-  simp only [CategoryStruct.comp, Function.comp]
-  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
-  · simp only [braiding_get_castAdd, tensorHom_eq_left, tensorHom_eq_right]
-  · simp only [braiding_get_natAdd, tensorHom_eq_left, tensorHom_eq_right]
+  simp only [braiding_get, braiding_get_ge, Fin.val_natAdd]
+  exact congrArg v.get (Fin.ext (by simp))
 
 @[simp]
 lemma hexagon_forward
     (X Y Z : CombinationalCircuitCategory V G) :
-    (associator X Y Z).hom ≫
-      (X.braiding (tensorObj Y Z)).hom ≫
-      (associator Y Z X).hom =
-    whiskerRight (X.braiding Y).hom Z ≫
-      (associator Y X Z).hom ≫
-      whiskerLeft Y (X.braiding Z).hom := by
+    (α_ X Y Z).hom ≫ (X.braiding (Y ⊗ Z)).hom ≫ (α_ Y Z X).hom =
+    (X.braiding Y).hom ▷ Z ≫ (α_ Y X Z).hom ≫ Y ◁ (X.braiding Z).hom := by
   apply Subtype.ext; funext v; apply Wires.ext; intro i
-  simp only [id, CategoryStruct.id, CategoryStruct.comp, Function.comp]
-  have hsub : ∀ a b : ℕ, a + b - a = b := by intros; omega
-  refine Fin.addCases (fun j => ?_) (fun jj => Fin.addCases (fun k => ?_) (fun k => ?_) jj) i
-  all_goals simp only [Fin.val_castAdd, Fin.val_natAdd, Wires.get_cast,
-    braiding_get, tensorHomVal_get, tensorObj, hsub, Wires.get_ofFn]
+  simp only [CategoryStruct.comp, Function.comp, instMonoidalCategory, associator, iso]
+  refine Fin.addCases (fun j => ?_)
+    (fun jj => Fin.addCases (fun k => ?_) (fun k => ?_) jj) i
+  all_goals simp only [Fin.val_castAdd, Fin.val_natAdd, Wires.get_cast, braiding_get,
+                       tensorHom_get, tensorObj, Wires.get_ofFn, CategoryStruct.id, id, id_val]
   all_goals split_ifs <;> (first
     | (refine congrArg v.get (Fin.ext ?_); simp at *; done)
     | (refine congrArg v.get (Fin.ext ?_); simp; omega))
@@ -593,33 +651,29 @@ lemma hexagon_forward
 @[simp]
 lemma hexagon_reverse
     (X Y Z : CombinationalCircuitCategory V G) :
-    (associator X Y Z).inv ≫
-      ((tensorObj X Y).braiding Z).hom ≫
-      (associator Z X Y).inv =
-    whiskerLeft X (Y.braiding Z).hom ≫
-      (associator X Z Y).inv ≫
-      whiskerRight (X.braiding Z).hom Y := by
+    (α_ X Y Z).inv ≫ ((X ⊗ Y).braiding Z).hom ≫ (α_ Z X Y).inv =
+    X ◁ (Y.braiding Z).hom ≫ (α_ X Z Y).inv ≫ (X.braiding Z).hom ▷ Y := by
   apply Subtype.ext; funext v; apply Wires.ext; intro i
-  simp only [id, CategoryStruct.id, CategoryStruct.comp, Function.comp]
-  have hsub : ∀ a b : ℕ, a + b - a = b := by intros; omega
-  refine Fin.addCases (fun jj => Fin.addCases (fun k => ?_) (fun k => ?_) jj) (fun j => ?_) i
-  all_goals simp only [Fin.val_castAdd, Fin.val_natAdd, Wires.get_cast,
-    braiding_get, tensorHomVal_get, tensorObj, hsub, Wires.get_ofFn]
+  simp only [CategoryStruct.comp, Function.comp, instMonoidalCategory, associator, iso]
+  refine Fin.addCases
+    (fun jj => Fin.addCases (fun k => ?_) (fun k => ?_) jj)
+    (fun j => ?_) i
+  all_goals simp only [Fin.val_castAdd, Fin.val_natAdd, Wires.get_cast, braiding_get,
+                       tensorHom_get, tensorObj, Wires.get_ofFn, CategoryStruct.id, id, id_val]
   all_goals split_ifs <;> (first
     | (refine congrArg v.get (Fin.ext ?_); simp at *; done)
-    | (refine congrArg v.get (Fin.ext ?_); simp [hsub]; omega))
+    | (refine congrArg v.get (Fin.ext ?_); simp []; omega))
 
 @[simp]
 lemma symmetry
     (X Y : CombinationalCircuitCategory V G) :
-    (X.braiding Y).hom ≫ (Y.braiding X).hom =
-    𝟙 (tensorObj X Y) := by
+    (X.braiding Y).hom ≫ (Y.braiding X).hom = 𝟙 (X ⊗ Y) := by
   apply Subtype.ext; funext v; apply Wires.ext; intro i
-  simp only [CategoryStruct.comp, Function.comp, CategoryStruct.id, id, braiding_get]
+  simp only [CategoryStruct.comp, Function.comp, instMonoidalCategory, braiding_get]
   split <;> split <;>
   exact congrArg v.get (Fin.ext (by simp only []; omega))
 
-@[simp]
+@[inline, simp]
 instance : SymmetricCategory (CombinationalCircuitCategory V G) where
   braiding
   braiding_naturality_left
