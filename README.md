@@ -17,7 +17,7 @@ A circuit verification library for Lean4.
   - [x] NAND Gate
   - [x] NOR Gate
   - [x] XOR Gate
-  - [ ] XNOR Gate
+  - [x] XNOR Gate
 - Arithmetic Circuits
   - [x] Half Adder
   - [x] Full Adder
