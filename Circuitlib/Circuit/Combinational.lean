@@ -67,16 +67,11 @@ def fork₂ := fork ⊗ₘ fork
 lemma fork₂_def (x y : Bool) : fork₂.val #v[↑x, ↑y] = #v[↑x, ↑x, ↑y, ↑y] :=
   by cases x <;> cases y <;> simp <;> rfl
 
-def copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 :=
-  fork₂ ≫
-  (α_ 1 1 2).hom ≫
-  (1 ◁ (α_ 1 1 1).inv) ≫
-  (1 ◁ ((β_ 1 1).hom ▷ 1)) ≫
-  (1 ◁ (α_ 1 1 1).hom) ≫
-  (α_ 1 1 2).inv
+def copy : (ofNat 2 : CombinationalCircuit) ⟶ 4 := fork₂ ≫ (1 ◁ ((β_ 1 1).hom ▷ 1))
 
 @[simp]
-lemma copy_def : copy.val #v[↑true, ↑false] = #v[↑true, ↑false, ↑true, ↑false] := rfl
+lemma copy_def (x y : Bool) : copy.val #v[↑x, ↑y] = #v[↑x, ↑y, ↑x, ↑y] := by
+  cases x <;> cases y <;> rfl
 
 def xor : (ofNat 2 : CombinationalCircuit) ⟶ 1 := copy ≫ (and ⊗ₘ or) ≫ (not ⊗ₘ 𝟙 1) ≫ and
 
@@ -84,8 +79,7 @@ def xor : (ofNat 2 : CombinationalCircuit) ⟶ 1 := copy ≫ (and ⊗ₘ or) ≫
 lemma xor_def (x y : Bool) : xor.val #v[↑x, ↑y] = #v[↑((x && !y) || (!x && y))] := by
   cases x <;> cases y <;> rfl
 
-def xnor : (ofNat 2 : CombinationalCircuit) ⟶ 1 :=
-  xor ≫ not
+def xnor : (ofNat 2 : CombinationalCircuit) ⟶ 1 := xor ≫ not
 
 @[simp]
 lemma xnor_def (x y : Bool) : xnor.val #v[↑x, ↑y] = #v[↑((x && y) || (!x && !y))] := by
@@ -101,9 +95,7 @@ lemma halfAdder_def
 
 def adder : (ofNat 3 : CombinationalCircuit) ⟶ 2 :=
   (halfAdder ⊗ₘ 𝟙 1) ≫
-  (α_ 1 1 1).hom ≫
-  (1 ◁ (β_ 1 1).hom) ≫
-  (α_ 1 1 1).inv ≫
+  (1 ◁ (β_ 1 1).hom) ⊗≫
   (halfAdder ⊗ₘ 𝟙 1) ≫
   (𝟙 1 ⊗ₘ or)
 
