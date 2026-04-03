@@ -120,7 +120,7 @@ abbrev tensorHom_val
     (g : X₂ ⟶ Y₂)
     (v : Wires V (X₁.obj + X₂.obj)) :
     Wires V (Y₁.obj + Y₂.obj) :=
-  (f.val ((v.take X₁.obj).cast tensorHom_val_add )).append
+  (f.val ((v.take X₁.obj).cast tensorHom_val_add)).append
     (g.val ((v.drop X₁.obj).cast tensorHom_val_sub))
 
 @[simp]
