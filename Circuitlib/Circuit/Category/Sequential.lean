@@ -51,9 +51,13 @@ universe u v
 
 variable {V : Type v} {G : Type u}
 
+/-- A stream function is causal if the output at time `t` depends only on inputs up to time `t`. -/
+def Causal (f : Stream α → Stream β) : Prop :=
+  ∀ (x y : Stream α) (t : ℕ), (∀ s, s ≤ t → x s = y s) → f x t = f y t
+
 /-- Homomorphism. -/
 def Hom (V : Type v) [Preorder V] (I O : SequentialCircuitCategory V G) :=
-  { f : Stream (Wires V I.obj) → Stream (Wires V O.obj) // Monotone f }
+  { f : Stream (Wires V I.obj) → Stream (Wires V O.obj) // Monotone f ∧ Causal f }
 
 @[inline, simp]
 def id_val : Stream (Wires V n) → Stream (Wires V n) := fun x => x
@@ -63,8 +67,12 @@ variable [Preorder V]
 @[simp]
 lemma id_monotone : Monotone (id_val (V:=V) (n:=n)) := monotone_id
 
+omit [Preorder V] in
+@[simp]
+lemma id_causal : Causal (id_val (V:=V) (n:=n)) := fun _ _ t h => h t le_rfl
+
 @[inline, simp]
-def id : SequentialCircuitCategory.Hom V X X := ⟨id_val, id_monotone⟩
+def id : SequentialCircuitCategory.Hom V X X := ⟨id_val, ⟨id_monotone, id_causal⟩⟩
 
 open CategoryTheory
 
@@ -72,7 +80,11 @@ open CategoryTheory
 instance : Category.{v} (SequentialCircuitCategory V G) where
   Hom := Hom V
   id _ := id
-  comp f g := ⟨g.val ∘ f.val, Monotone.comp g.property f.property⟩
+  comp f g := ⟨g.val ∘ f.val,
+    ⟨Monotone.comp g.property.1 f.property.1,
+     fun x y t h => g.property.2 _ _ t
+      fun s hs => f.property.2 x y s
+        fun s' hs' => h s' (le_trans hs' hs)⟩⟩
   id_comp _ := rfl
   comp_id _ := rfl
   assoc _ _ _ := rfl
@@ -174,17 +186,37 @@ lemma tensorHom_monotone
       have lhs_eq := tensorHom_eq_left v₁ t j f g
       have rhs_eq := tensorHom_eq_left v₂ t j f g
       rw [lhs_eq, rhs_eq]
-      exact f.property (fun t' k => by
+      exact f.property.1 (fun t' k => by
         simp only [Stream'.get_map, Wires.get_ofFn]
         exact h t' (k.castAdd _)) t j)
     (fun j => by
       have lhs_eq := tensorHom_eq_right v₁ t j f g
       have rhs_eq := tensorHom_eq_right v₂ t j f g
       rw [lhs_eq, rhs_eq]
-      exact g.property (fun t' k => by
+      exact g.property.1 (fun t' k => by
         simp only [Stream'.get_map, Wires.get_ofFn]
         exact h t' (k.natAdd _)) t j)
     i
+
+@[simp]
+lemma tensorHom_causal
+    {X₁ Y₁ X₂ Y₂ : SequentialCircuitCategory V G}
+    (f : X₁ ⟶ Y₁)
+    (g : X₂ ⟶ Y₂) :
+    Causal (tensorHom_val f g) := fun x y t h => by
+  simp only [tensorHom_val]
+  have hf : f.val (Stream'.map (fun w => (w.take X₁.obj).cast tensorHom_val_add) x) t =
+      f.val (Stream'.map (fun w => (w.take X₁.obj).cast tensorHom_val_add) y) t :=
+    f.property.2 _ _ t fun s hs => by
+      show (Stream'.map _ x) s = (Stream'.map _ y) s
+      simp only [Stream'.map_apply, h s hs]
+  have hg : g.val (Stream'.map (fun w => (w.drop X₁.obj).cast tensorHom_val_sub) x) t =
+      g.val (Stream'.map (fun w => (w.drop X₁.obj).cast tensorHom_val_sub) y) t :=
+    g.property.2 _ _ t fun s hs => by
+      show (Stream'.map _ x) s = (Stream'.map _ y) s
+      simp only [Stream'.map_apply, h s hs]
+  unfold Stream'.zip Stream'.get
+  rw [hf, hg]
 
 @[inline, simp]
 abbrev tensorHom
@@ -192,7 +224,7 @@ abbrev tensorHom
     (f : X₁ ⟶ Y₁)
     (g : X₂ ⟶ Y₂) :
     tensorObj X₁ X₂ ⟶ tensorObj Y₁ Y₂ :=
-  ⟨tensorHom_val f g, tensorHom_monotone f g⟩
+  ⟨tensorHom_val f g, ⟨tensorHom_monotone f g, tensorHom_causal f g⟩⟩
 
 @[simp]
 abbrev iso_hom_val (h : n = m) : Stream (Wires V n) → Stream (Wires V m) :=
@@ -202,9 +234,15 @@ abbrev iso_hom_val (h : n = m) : Stream (Wires V n) → Stream (Wires V m) :=
 lemma iso_hom_monotone (h : n = m) : Monotone (iso_hom_val (V:=V) h) :=
   fun _ _ hab t i => hab t (i.cast h.symm)
 
+omit [Preorder V] in
 @[simp]
-abbrev iso_hom (h : n = m) : { f : Stream (Wires V n) → Stream (Wires V m) // Monotone f } :=
-  ⟨iso_hom_val h, iso_hom_monotone h⟩
+lemma iso_hom_causal (h : n = m) : Causal (iso_hom_val (V:=V) h) :=
+  fun _ _ t heq => congrArg (·.cast h) (heq t le_rfl)
+
+@[simp]
+abbrev iso_hom (h : n = m) :
+    { f : Stream (Wires V n) → Stream (Wires V m) // Monotone f ∧ Causal f } :=
+  ⟨iso_hom_val h, ⟨iso_hom_monotone h, iso_hom_causal h⟩⟩
 
 @[simp]
 abbrev iso_inv_val (h : n = m) : Stream (Wires V m) → Stream (Wires V n) :=
@@ -214,9 +252,15 @@ abbrev iso_inv_val (h : n = m) : Stream (Wires V m) → Stream (Wires V n) :=
 lemma iso_inv_monotone (h : n = m) : Monotone (iso_inv_val (V:=V) h) :=
   fun _ _ hab t i => hab t (i.cast h)
 
+omit [Preorder V] in
 @[simp]
-abbrev iso_inv (h : n = m) : { f : Stream (Wires V m) → Stream (Wires V n) // Monotone f } :=
-  ⟨iso_inv_val h, iso_inv_monotone h⟩
+lemma iso_inv_causal (h : n = m) : Causal (iso_inv_val (V:=V) h) :=
+  fun _ _ t heq => congrArg (·.cast h.symm) (heq t le_rfl)
+
+@[simp]
+abbrev iso_inv (h : n = m) :
+    { f : Stream (Wires V m) → Stream (Wires V n) // Monotone f ∧ Causal f } :=
+  ⟨iso_inv_val h, ⟨iso_inv_monotone h, iso_inv_causal h⟩⟩
 
 @[simp]
 lemma iso_hom_inv_id
@@ -301,7 +345,7 @@ lemma tensorHom_def
         Vector.ofFn fun i ↦ w.get (Fin.natAdd W.obj i)) v) =
       (Stream'.map (fun w =>
         Vector.ofFn fun i ↦ w.get (Fin.natAdd X.obj i))
-          (tensorHom_val f ⟨id_val, id_monotone⟩ v)) := by
+          (tensorHom_val f ⟨id_val, ⟨id_monotone, id_causal⟩⟩ v)) := by
       funext t'
       apply Wires.ext
       intro k
@@ -550,9 +594,15 @@ lemma braiding_hom_monotone
                Array.getElem_extract, Nat.zero_add]
     exact hab t ⟨j.val, braiding_hom_ge⟩
 
+@[simp]
+lemma braiding_hom_causal
+    {X Y : SequentialCircuitCategory V G} :
+    Causal (X.braiding_hom_val Y) := fun _ _ t h => by
+  simp only [braiding_hom_val, Stream.map, Stream'.map_apply, h t le_rfl]
+
 @[inline, simp]
 def braiding_hom (X Y : SequentialCircuitCategory V G) : X ⊗ Y ⟶ Y ⊗ X :=
-  ⟨braiding_hom_val X Y, braiding_hom_monotone⟩
+  ⟨braiding_hom_val X Y, ⟨braiding_hom_monotone, braiding_hom_causal⟩⟩
 
 @[simp]
 lemma braiding_hom_inv_id
