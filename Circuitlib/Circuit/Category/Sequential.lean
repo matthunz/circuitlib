@@ -43,6 +43,10 @@ instance [Preorder α] : Preorder (Stream α) where
 
 abbrev Stream.map.{u, v} {α : Type u} {β : Type v} : (α → β) → Stream α → Stream β := Stream'.map
 
+@[simp]
+lemma Stream'.map_apply (f : α → β) (s : Stream' α) (t : ℕ) :
+    Stream'.map f s t = f (s t) := rfl
+
 universe u v
 
 variable {V : Type v} {G : Type u}
@@ -107,7 +111,8 @@ lemma tensorHom_take
     (a : Wires V (X₁.obj + X₂.obj)) :
     (a.take X₁.obj).cast tensorHom_val_add =
     Vector.ofFn fun i => a.get (Fin.castAdd X₂.obj i) := by
-  apply Wires.ext; intro i
+  apply Wires.ext
+  intro i
   simp [Vector.get]
 
 @[inline, simp]
@@ -149,12 +154,14 @@ lemma tensorHom_eq_right
   have hdrop : ∀ (a : Wires V (X₁.obj + X₂.obj)),
       (a.drop X₁.obj).cast tensorHom_val_sub =
       Vector.ofFn fun i => a.get (Fin.natAdd X₁.obj i) := fun a => by
-    apply Wires.ext; intro i
+    apply Wires.ext
+    intro i
     simp [Vector.get, Vector.drop, Fin.val_natAdd]
   simp only [tensorHom_take, hdrop, tensorHom_val, Stream'.get_zip,
     Vector.get, Vector.append]
   rw [Array.getElem_append_right (by simp)]
-  congr 1; simp
+  congr 1
+  simp
 
 @[simp]
 lemma tensorHom_monotone
@@ -215,13 +222,17 @@ abbrev iso_inv (h : n = m) : { f : Stream (Wires V m) → Stream (Wires V n) // 
 lemma iso_hom_inv_id
     (h : n = m) :
     iso_hom h ≫ iso_inv h = 𝟙 (OfNat.ofNat n : SequentialCircuitCategory V G) := by
-  apply Subtype.ext; funext v; rfl
+  apply Subtype.ext
+  funext v
+  rfl
 
 @[simp]
 lemma iso_inv_hom_id
     (h : n = m) :
     iso_inv h ≫ iso_hom h = 𝟙 (OfNat.ofNat m : SequentialCircuitCategory V G) := by
-  apply Subtype.ext; funext v; rfl
+  apply Subtype.ext
+  funext v
+  rfl
 
 @[inline, simp]
 def iso
@@ -236,10 +247,11 @@ def iso
 lemma whisker
     (X Y : SequentialCircuitCategory V G) :
     tensorHom (𝟙 X) (𝟙 Y) = 𝟙 (X.tensorObj Y) := by
-  apply Subtype.ext; funext v
-  funext t
+  apply Subtype.ext
+  funext v t
   change (tensorHom_val (𝟙 X) (𝟙 Y) v).get t = v.get t
-  apply Wires.ext; intro i
+  apply Wires.ext
+  intro i
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · rw [tensorHom_eq_left v t j (𝟙 X) (𝟙 Y)]
     simp [CategoryStruct.id, id, id_val, Stream'.map, Wires.get_ofFn]
@@ -265,10 +277,12 @@ abbrev whiskerRight
 lemma tensorHom_def
     {W X Y Z : SequentialCircuitCategory V G} (f : W ⟶ X) (g : Y ⟶ Z) :
     tensorHom f g = whiskerRight f Y ≫ whiskerLeft X g := by
-  apply Subtype.ext; funext v; funext t
+  apply Subtype.ext
+  funext v t
   change (tensorHom_val f g v).get t =
     (tensorHom_val id g (tensorHom_val f id v)).get t
-  apply Wires.ext; intro i
+  apply Wires.ext
+  intro i
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · rw [tensorHom_eq_left v t j f g, tensorHom_eq_left _ t j id g]
     simp only [id, Stream'.map, id_val, Wires.get_ofFn]
@@ -280,7 +294,9 @@ lemma tensorHom_def
       (Stream'.map (fun w =>
         Vector.ofFn fun i ↦ w.get (Fin.natAdd X.obj i))
           (tensorHom_val f ⟨id_val, id_monotone⟩ v)) := by
-      funext t'; apply Wires.ext; intro k
+      funext t'
+      apply Wires.ext
+      intro k
       simp only [Stream'.map, Wires.get_ofFn]
       have := (tensorHom_eq_right v t' k f (𝟙 Y)).symm
       simp only [CategoryStruct.id, id, id_val, Stream'.map,
@@ -301,10 +317,12 @@ lemma tensorHom_comp_tensorHom
     (g₁ : Y₁ ⟶ Z₁)
     (g₂ : Y₂ ⟶ Z₂) :
     tensorHom f₁ f₂ ≫ tensorHom g₁ g₂ = tensorHom (f₁ ≫ g₁) (f₂ ≫ g₂) := by
-  apply Subtype.ext; funext v; funext t
+  apply Subtype.ext
+  funext v t
   change (tensorHom_val g₁ g₂ (tensorHom_val f₁ f₂ v)).get t =
     (tensorHom_val (f₁ ≫ g₁) (f₂ ≫ g₂) v).get t
-  apply Wires.ext; intro i
+  apply Wires.ext
+  intro i
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · rw [tensorHom_eq_left _ t j g₁ g₂,
         tensorHom_eq_left v t j (f₁ ≫ g₁) (f₂ ≫ g₂)]
@@ -345,14 +363,17 @@ lemma associator_naturality
     (f₃ : X₃ ⟶ Y₃) :
     tensorHom (tensorHom f₁ f₂) f₃ ≫ (Y₁.associator Y₂ Y₃).hom =
       (X₁.associator X₂ X₃).hom ≫ tensorHom f₁ (tensorHom f₂ f₃) := by
-  apply Subtype.ext; funext v
-  funext t; apply Vector.ext; intro i hi
+  apply Subtype.ext
+  funext v t
+  apply Vector.ext
+  intro i hi
   simp only [CategoryStruct.comp, Function.comp, tensorHom_val,
     associator, iso, iso_hom, iso_hom_val, Stream'.map_map,
     Stream'.map, Stream'.zip, Stream'.get, Vector.append,
     Vector.cast]
   simp only [Vector.getElem_mk, Array.append_assoc]
-  congr 1; congr 1
+  congr 1
+  congr 1
   · exact congrArg Vector.toArray (congrFun (congrArg f₁.val
       (funext fun t' => Wires.ext fun k => by
         simp [Stream'.map, Function.comp, Vector.get, Vector.take])) t)
@@ -371,7 +392,10 @@ lemma pentagon
       (W.associator (X.tensorObj Y) Z).hom ≫
       whiskerLeft W (X.associator Y Z).hom =
     ((W.tensorObj X).associator Y Z).hom ≫ (W.associator X (Y.tensorObj Z)).hom := by
-  apply Subtype.ext; funext v; funext t; apply Vector.ext; intro i hi
+  apply Subtype.ext
+  funext v t
+  apply Vector.ext
+  intro i hi
   simp only [CategoryStruct.comp, Function.comp, tensorHom_val,
     associator, iso, iso_hom, iso_hom_val,
     Vector.append, Vector.cast]
@@ -406,7 +430,10 @@ abbrev rightUnitor (X : SequentialCircuitCategory V G) : tensorObj X tensorUnit 
 lemma leftUnitor_naturality
     {X Y : SequentialCircuitCategory V G} (f : X ⟶ Y) :
     whiskerLeft tensorUnit f ≫ (leftUnitor Y).hom = (leftUnitor X).hom ≫ f := by
-  apply Subtype.ext; funext v; funext t; apply Vector.ext; intro i hi
+  apply Subtype.ext
+  funext v t
+  apply Vector.ext
+  intro i hi
   simp only [iso, CategoryStruct.comp, Function.comp,
     tensorHom_val, iso_hom_val, iso_hom]
   unfold Stream'.map Stream'.zip Stream'.get
@@ -417,7 +444,10 @@ lemma rightUnitor_naturality
     {X Y : SequentialCircuitCategory V G}
     (f : X ⟶ Y) :
     whiskerRight f tensorUnit ≫ (rightUnitor Y).hom = (rightUnitor X).hom ≫ f := by
-  apply Subtype.ext; funext v; funext t; apply Vector.ext; intro i hi
+  apply Subtype.ext
+  funext v t
+  apply Vector.ext
+  intro i hi
   simp only [CategoryStruct.comp, Function.comp,
     tensorHom_val, iso_hom_val, iso_hom, iso]
   unfold Stream'.map Stream'.zip Stream'.get
@@ -431,7 +461,10 @@ lemma triangle
     (X Y : SequentialCircuitCategory V G) :
     (associator X tensorUnit Y).hom ≫ whiskerLeft X (leftUnitor Y).hom =
     whiskerRight (rightUnitor X).hom Y := by
-  apply Subtype.ext; funext v; funext t; apply Vector.ext; intro i hi
+  apply Subtype.ext
+  funext v t
+  apply Vector.ext
+  intro i hi
   simp only [CategoryStruct.comp, Function.comp,
     tensorHom_val, iso_hom_val, iso_hom, iso]
   unfold Stream'.map Stream'.zip Stream'.get
@@ -457,6 +490,411 @@ instance : MonoidalCategory.{v} (SequentialCircuitCategory V G) where
   rightUnitor_naturality
   pentagon
   triangle
+
+@[simp]
+lemma braiding_hom_eq
+    {X Y : SequentialCircuitCategory V G} :
+    (X ⊗ Y).obj - X.obj + min X.obj (X ⊗ Y).obj = (Y ⊗ X).obj :=
+  by simp
+
+@[inline, simp]
+abbrev braiding_hom_val
+    (X Y : SequentialCircuitCategory V G) :
+    Stream (Wires V (X ⊗ Y).obj) →
+    Stream (Wires V (Y ⊗ X).obj) :=
+  Stream.map (fun v => ((v.drop X.obj).append (v.take X.obj)).cast braiding_hom_eq)
+
+@[simp]
+lemma braiding_hom_lt
+    {X Y : SequentialCircuitCategory V G}
+    {j : Fin Y.obj} :
+    X.obj + ↑j < (X ⊗ Y).obj := by
+  change X.obj + j.val < X.obj + Y.obj
+  omega
+
+@[simp]
+lemma braiding_hom_ge
+    {X Y : SequentialCircuitCategory V G}
+    {j : Fin X.obj} :
+    ↑j < (X ⊗ Y).obj := by
+  change j.val < X.obj + Y.obj
+  omega
+
+@[simp]
+lemma braiding_hom_monotone
+    {X Y : SequentialCircuitCategory V G} :
+    Monotone (X.braiding_hom_val Y) := fun a b hab t i => by
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp only [Stream'.map, Stream'.get, Vector.get, Vector.cast, Vector.append,
+               Vector.drop, instMonoidalCategory, Vector.size_toArray, Fin.val_cast,
+               Fin.val_castAdd, Array.size_extract, min_self, Nat.add_sub_cancel_left, Fin.is_lt,
+               Array.getElem_append_left, Array.getElem_extract]
+    exact hab t ⟨X.obj + j.val, braiding_hom_lt⟩
+  · simp only [Stream.map, Stream'.map, Stream'.get, braiding_hom_val, instMonoidalCategory,
+               Vector.get, Vector.cast, Vector.append, Vector.drop, Vector.take,
+               Vector.size_toArray, Fin.val_cast, Fin.val_natAdd, Array.size_extract, min_self,
+               Nat.add_sub_cancel_left, Nat.le_add_right, Array.getElem_append_right,
+               Array.getElem_extract, Nat.zero_add]
+    exact hab t ⟨j.val, braiding_hom_ge⟩
+
+@[inline, simp]
+def braiding_hom (X Y : SequentialCircuitCategory V G) : X ⊗ Y ⟶ Y ⊗ X :=
+  ⟨braiding_hom_val X Y, braiding_hom_monotone⟩
+
+@[simp]
+lemma braiding_hom_inv_id
+    {X Y : SequentialCircuitCategory V G} :
+    X.braiding_hom Y ≫ Y.braiding_hom X = 𝟙 (X ⊗ Y) := by
+  apply Subtype.ext
+  funext v t
+  apply Wires.ext
+  intro i
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp [Vector.get, Vector.append]
+  · simp [Vector.get, Vector.append]
+
+@[inline, simp]
+def braiding (X Y : SequentialCircuitCategory V G) : X ⊗ Y ≅ Y ⊗ X :=
+  { hom := braiding_hom X Y
+    inv := braiding_hom Y X
+    hom_inv_id := braiding_hom_inv_id
+    inv_hom_id := braiding_hom_inv_id }
+
+@[simp]
+lemma braiding_naturality_left
+    {X Y : SequentialCircuitCategory V G}
+    (f : X ⟶ Y)
+    (Z : SequentialCircuitCategory V G) :
+    f ▷ Z ≫ (Y.braiding Z).hom = (braiding X Z).hom ≫ Z ◁ f := by
+  apply Subtype.ext
+  funext v t
+  apply Wires.ext
+  intro i
+  change (braiding_hom_val Y Z (tensorHom_val f (𝟙 Z) v) t).get i =
+    (tensorHom_val (𝟙 Z) f (braiding_hom_val X Z v) t).get i
+  simp only [braiding_hom_val, tensorHom_val]
+  unfold Stream.map Stream'.map Stream'.zip Stream'.get
+  dsimp only [Function.comp]
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp [Vector.get, Vector.append]
+  · simp only [Vector.get, instCategory, id, instMonoidalCategory, tensorUnit, tensorObj,
+               Vector.append, Vector.take_eq_extract, Vector.drop_eq_cast_extract,
+               Vector.toArray_extract, Vector.extract_mk, Array.extract_append, Vector.size_toArray,
+               Nat.sub_self, Nat.add_sub_cancel_left, Array.extract_extract, Nat.add_zero, min_self,
+               Vector.cast_mk, Nat.sub_zero, Nat.zero_le, Nat.sub_eq_zero_of_le, Array.extract_zero,
+               Array.append_empty, Array.append_assoc, Vector.drop_mk, Fin.val_cast,
+               Fin.val_natAdd, Array.size_extract, Nat.le_add_right, inf_of_le_right,
+               Array.getElem_append_right, Array.getElem_extract, Nat.zero_add,
+               Vector.getElem_toArray]
+    exact congrArg (·[j.val]) (congrFun (congrArg f.val (funext fun n => by
+      rw [← Vector.toArray_inj]
+      simp [Vector.toArray_cast, Vector.toArray_extract,
+        Array.extract_eq_empty_iff])) t)
+
+@[simp]
+lemma braiding_naturality_right
+    (X : SequentialCircuitCategory V G)
+    {Y Z : SequentialCircuitCategory V G}
+    (f : Y ⟶ Z) :
+    X ◁ f ≫ (X.braiding Z).hom = (braiding X Y).hom ≫ f ▷ X := by
+  apply Subtype.ext
+  funext v t
+  apply Wires.ext
+  intro i
+  change (braiding_hom_val X Z (tensorHom_val (𝟙 X) f v) t).get i =
+    (tensorHom_val f (𝟙 X) (braiding_hom_val X Y v) t).get i
+  simp only [braiding_hom_val, tensorHom_val]
+  unfold Stream.map Stream'.map Stream'.zip Stream'.get
+  dsimp only [Function.comp]
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp only [Vector.get, instCategory, id, instMonoidalCategory, tensorUnit, tensorObj,
+               Vector.append, Vector.drop_eq_cast_extract, Vector.extract_mk, Array.extract_append,
+               Nat.zero_add, Nat.le_add_right, inf_of_le_right, Array.size_extract,
+               Vector.size_toArray, Nat.sub_zero, Nat.sub_self, Nat.add_sub_cancel_left,
+               Vector.cast_mk, min_self, Nat.zero_le, Array.append_assoc, Vector.drop_mk,
+               Fin.val_cast, Fin.val_castAdd, Array.getElem_append_right, Fin.is_lt,
+               Array.getElem_append_left, Array.getElem_extract, Vector.getElem_toArray]
+    exact congrArg (·[j.val]) (congrFun (congrArg f.val (funext fun n => by
+      rw [← Vector.toArray_inj]
+      simp [Vector.toArray_cast, Vector.toArray_extract])) t)
+  · simp [Vector.get, Vector.append]
+
+omit [Preorder V] in
+@[simp]
+lemma braiding_add
+    {X Y : SequentialCircuitCategory V G}
+    (h : ↑i < Y.obj) :
+    X.obj + ↑i < X.obj + Y.obj := by omega
+
+@[simp]
+lemma braiding_sub
+    {X Y : SequentialCircuitCategory V G}
+    {i : Fin (Y ⊗ X).obj} :
+    ↑i - Y.obj < (X ⊗ Y).obj := by
+  have : i.val < Y.obj + X.obj := i.isLt
+  change i.val - Y.obj < X.obj + Y.obj
+  omega
+
+omit [Preorder V] in
+@[simp]
+lemma braiding_get_ge
+    {X Y : SequentialCircuitCategory V G}
+    {j : Fin X.obj} :
+    ¬Y.obj + ↑j < Y.obj := by omega
+
+omit [Preorder V] in
+@[simp]
+lemma iso_hom_get
+    (h : n = m) (v : Stream (Wires V n)) (t : ℕ) (i : Fin m) :
+    (iso_hom_val (V:=V) h v t).get i = (v t).get ⟨i.val, h ▸ i.isLt⟩ := by
+  unfold iso_hom_val
+  simp [Stream'.map, Stream'.get, Wires.get_cast]
+
+@[simp]
+lemma braiding_get
+    (X Y : SequentialCircuitCategory V G)
+    (v : Stream (Wires V (X ⊗ Y).obj))
+    (t : ℕ)
+    (i : Fin (Y ⊗ X).obj) :
+    (X.braiding_hom_val Y v t).get i =
+      if h : i.val < Y.obj
+      then (v t).get ⟨X.obj + i.val, braiding_add h⟩
+      else (v t).get ⟨i.val - Y.obj, braiding_sub⟩ := by
+  unfold braiding_hom_val Stream.map Stream'.map Stream'.get
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · simp only [Fin.val_castAdd, dif_pos j.isLt]
+    simp [Vector.get, Vector.append]
+  · simp only [Fin.val_natAdd, dif_neg (show ¬(Y.obj + j.val < Y.obj) from by omega)]
+    simp [Vector.get, Vector.append]
+
+@[simp]
+lemma tensorHom_get
+    {X₁ Y₁ X₂ Y₂ : SequentialCircuitCategory V G}
+    (f : X₁ ⟶ Y₁) (g : X₂ ⟶ Y₂)
+    (v : Stream (Wires V (X₁.obj + X₂.obj)))
+    (t : ℕ)
+    (i : Fin (Y₁.obj + Y₂.obj)) :
+    (tensorHom_val f g v t).get i =
+    if h : i.val < Y₁.obj
+    then (f.val (Stream'.map tensorHom_eq' v) t).get ⟨i.val, h⟩
+    else (g.val (Stream'.map (fun w =>
+      Vector.ofFn fun k => w.get (Fin.natAdd X₁.obj k)) v) t).get
+      ⟨i.val - Y₁.obj, by omega⟩ := by
+  change ((tensorHom_val f g v).get t).get i = _
+  refine Fin.addCases (fun j => ?_) (fun j => ?_) i
+  · rw [tensorHom_eq_left]
+    simp only [Fin.val_castAdd, dif_pos j.isLt]
+  · rw [tensorHom_eq_right]
+    simp only [Fin.val_natAdd, dif_neg (show ¬(Y₁.obj + j.val < Y₁.obj) from by omega)]
+    congr 1
+    exact Fin.ext (by simp)
+
+omit [Preorder V] in
+@[simp]
+lemma tensorObj_size_eq_forward
+    {X Y Z : SequentialCircuitCategory V G}
+    (v : Stream (Wires V ((X.tensorObj Y).tensorObj Z).obj)) :
+    (v t).toArray.size = ((X.tensorObj Y).tensorObj Z).obj := (v t).size_toArray
+
+@[simp]
+lemma hexagon_forward
+    (X Y Z : SequentialCircuitCategory V G) :
+    (α_ X Y Z).hom ≫ (X.braiding (Y ⊗ Z)).hom ≫ (α_ Y Z X).hom =
+    (X.braiding Y).hom ▷ Z ≫ (α_ Y X Z).hom ≫ Y ◁ (X.braiding Z).hom := by
+  change (associator X Y Z).hom ≫ (X.braiding (tensorObj Y Z)).hom ≫ (associator Y Z X).hom =
+    whiskerRight (X.braiding Y).hom Z ≫ (associator Y X Z).hom ≫ whiskerLeft Y (X.braiding Z).hom
+  apply Subtype.ext
+  funext v t
+  apply Wires.ext
+  intro i
+  simp only [CategoryStruct.comp, Function.comp, tensorHom_val, associator, iso, iso_hom,
+             iso_hom_val, braiding, braiding_hom, braiding_hom_val, Vector.append, Vector.cast,
+             CategoryStruct.id, id]
+  unfold Stream.map Stream'.map Stream'.zip Stream'.get
+  simp only [Vector.drop, Vector.take, id_val]
+  unfold Array.take Array.drop
+  have htXY : (X ⊗ Y).obj = X.obj + Y.obj := rfl
+  have hm1 : min (X.obj + Y.obj) (X.obj + Y.obj + Z.obj) = X.obj + Y.obj :=
+    min_eq_left (by omega)
+  have hm2 : min X.obj (X.obj + Y.obj) = X.obj := min_eq_left (by omega)
+  refine Fin.addCases (fun j => ?_) (fun jj => Fin.addCases (fun k => ?_) (fun k => ?_) jj) i
+  all_goals simp only [Vector.get, Fin.val_castAdd, Fin.val_natAdd, Fin.val_cast,
+    Array.size_extract, Array.size_append, tensorObj_size_eq_forward, htXY, hm1, hm2, min_self,
+    Nat.add_sub_cancel_left, Nat.sub_zero]
+  · rw [Array.getElem_append_left (by simp [*]; omega), Array.getElem_extract,
+        Array.getElem_append_left (by simp [*]), Array.getElem_extract,
+        Array.getElem_append_left (by simp [*]; omega),
+        Array.getElem_append_left (by simp [*]),
+        Array.getElem_extract, Array.getElem_extract]
+    congr 1
+    omega
+  · rw [Array.getElem_append_left (by simp [*]), Array.getElem_extract,
+        Array.getElem_append_right (by simp [*])]
+    simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_forward, hm1, hm2, min_self,
+      Nat.add_sub_cancel_left, Nat.sub_zero]
+    rw [Array.getElem_append_left (by simp [*]; omega),
+        Array.getElem_extract, Array.getElem_extract,
+        Array.getElem_append_right (by simp [*])]
+    simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_forward, Nat.sub_zero]
+    rw [Array.getElem_extract]
+    congr 1
+    omega
+  · rw [Array.getElem_append_right (by simp [*])]
+    simp only [Array.size_extract, tensorObj_size_eq_forward, min_self]
+    rw [Array.getElem_extract,
+        Array.getElem_append_right (by simp [*])]
+    simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_forward, hm1, hm2, min_self,
+      Nat.add_sub_cancel_left, Nat.sub_zero]
+    rw [Array.getElem_append_right (by simp [*]; omega)]
+    simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_forward, hm1, hm2, min_self,
+      Nat.add_sub_cancel_left, Nat.sub_zero]
+    rw [Array.getElem_extract, Array.getElem_extract,
+        Array.getElem_append_left (by simp [*]),
+        Array.getElem_append_right (by simp [*])]
+    simp only [Array.size_extract, tensorObj_size_eq_forward, hm1, min_self,
+               Nat.add_sub_cancel_left, Nat.sub_zero]
+    rw [Array.getElem_extract, Array.getElem_extract]
+    congr 1
+    omega
+
+omit [Preorder V] in
+@[simp]
+lemma tensorObj_size_eq_reverse
+    {X Y Z : SequentialCircuitCategory V G}
+    (v : Stream (Wires V (X.tensorObj (Y.tensorObj Z)).obj)) :
+    (v t).toArray.size = (X.tensorObj (Y.tensorObj Z)).obj := (v t).size_toArray
+
+@[simp]
+lemma hexagon_reverse
+    (X Y Z : SequentialCircuitCategory V G) :
+    (α_ X Y Z).inv ≫ ((X ⊗ Y).braiding Z).hom ≫ (α_ Z X Y).inv =
+    X ◁ (Y.braiding Z).hom ≫ (α_ X Z Y).inv ≫ (X.braiding Z).hom ▷ Y := by
+  change (associator X Y Z).inv ≫ ((tensorObj X Y).braiding Z).hom ≫ (associator Z X Y).inv =
+    whiskerLeft X (Y.braiding Z).hom ≫ (associator X Z Y).inv ≫ whiskerRight (X.braiding Z).hom Y
+  apply Subtype.ext
+  funext v t
+  apply Wires.ext
+  intro i
+  simp only [CategoryStruct.comp, Function.comp, tensorHom_val, associator, iso, iso_inv,
+             iso_inv_val, braiding, braiding_hom, braiding_hom_val, Vector.append, Vector.cast,
+             CategoryStruct.id, id]
+  unfold Stream.map Stream'.map Stream'.zip Stream'.get
+  simp only [Vector.drop, Vector.take, id_val]
+  unfold Array.take Array.drop
+  have htXZ : (X ⊗ Z).obj = X.obj + Z.obj := rfl
+  have hm9 : min Y.obj (Y.obj + Z.obj) = Y.obj := min_eq_left (by omega)
+  have hm3' : min X.obj (X.obj + (Y.obj + Z.obj)) = X.obj := min_eq_left (by omega)
+  have hm7' : min (X.obj + Z.obj) (X.obj + (Z.obj + Y.obj)) = X.obj + Z.obj :=
+    min_eq_left (by omega)
+  have hsub1 : X.obj + (Y.obj + Z.obj) - (X.obj + Y.obj) = Z.obj := by omega
+  refine Fin.addCases
+    (fun jj => Fin.addCases (fun j => ?_) (fun k => ?_) jj)
+    (fun k => ?_) i
+  all_goals simp only [Vector.get, Fin.val_castAdd, Fin.val_natAdd, Fin.val_cast,
+    Array.size_extract, Array.size_append, tensorObj_size_eq_reverse, htXZ, hm9,
+    hm3', hm7', min_self, Nat.add_sub_cancel_left, Nat.sub_zero]
+  all_goals
+    first
+    | rw [Array.getElem_append_right
+            (by simp only [Array.size_extract, tensorObj_size_eq_reverse, min_self, hsub1]; omega)]
+      simp only [Array.size_extract, tensorObj_size_eq_reverse, min_self, hsub1]
+      rw [Array.getElem_extract,
+           Array.getElem_append_right
+             (by
+                simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_reverse,
+                           min_self, hm3', Nat.add_sub_cancel_left, Nat.sub_zero]
+                omega)]
+      simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_reverse, hm3', min_self,
+                 Nat.add_sub_cancel_left, Nat.sub_zero]
+      rw [Array.getElem_extract,
+          Array.getElem_append_right
+            (by
+               simp only [Array.size_extract, tensorObj_size_eq_reverse, hm3', Nat.sub_zero]
+               omega)]
+      simp only [Array.size_extract, tensorObj_size_eq_reverse, hm3', Nat.sub_zero]
+      rw [Array.getElem_append_right
+            (by
+               simp only [Array.size_extract, tensorObj_size_eq_reverse, min_self,
+                          Nat.add_sub_cancel_left]
+               omega)]
+      simp only [Array.size_extract, tensorObj_size_eq_reverse, min_self, Nat.add_sub_cancel_left]
+      rw [Array.getElem_extract, Array.getElem_extract]
+      congr 1
+      omega
+    | rw [Array.getElem_append_left
+            (by simp only [Array.size_extract, tensorObj_size_eq_reverse, min_self, hsub1]; omega),
+          Array.getElem_extract,
+          Array.getElem_append_left
+            (by
+               simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_reverse,
+                          min_self, hm3', Nat.add_sub_cancel_left, Nat.sub_zero]
+               omega),
+          Array.getElem_append_left
+            (by
+               simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_reverse,
+                           min_self, hm3', Nat.add_sub_cancel_left, Nat.sub_zero]
+               omega),
+          Array.getElem_extract, Array.getElem_extract,
+          Array.getElem_append_right
+             (by
+                simp only [Array.size_extract, tensorObj_size_eq_reverse, hm3', Nat.sub_zero]
+                omega)]
+      simp only [Array.size_extract, tensorObj_size_eq_reverse, hm3', Nat.sub_zero]
+      rw [Array.getElem_append_left
+            (by
+               simp only [Array.size_extract, tensorObj_size_eq_reverse, min_self,
+                          Nat.add_sub_cancel_left]
+               omega),
+          Array.getElem_extract, Array.getElem_extract]
+      congr 1
+      omega
+    | rw [Array.getElem_append_right
+            (by simp only [Array.size_extract, tensorObj_size_eq_reverse, min_self, hsub1]; omega)]
+      simp only [Array.size_extract, tensorObj_size_eq_reverse, min_self, hsub1]
+      rw [Array.getElem_extract,
+          Array.getElem_append_left
+            (by
+               simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_reverse,
+                          min_self, Nat.add_sub_cancel_left, Nat.sub_zero]
+               omega),
+          Array.getElem_append_right
+            (by
+              simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_reverse, min_self,
+                         hm3', Nat.add_sub_cancel_left, Nat.sub_zero]
+              omega)]
+      simp only [Array.size_extract, Array.size_append, tensorObj_size_eq_reverse, hm3', min_self,
+                 Nat.add_sub_cancel_left, Nat.sub_zero]
+      rw [Array.getElem_extract, Array.getElem_extract,
+          Array.getElem_append_left
+            (by
+               simp only [Array.size_extract, tensorObj_size_eq_reverse, hm3', hm9, Nat.sub_zero]
+               omega),
+          Array.getElem_extract]
+      congr 1
+      omega
+
+@[simp]
+lemma symmetry
+    (X Y : SequentialCircuitCategory V G) :
+    (X.braiding Y).hom ≫ (Y.braiding X).hom = 𝟙 (X ⊗ Y) := by
+  change (X.braiding_hom Y) ≫ (Y.braiding_hom X) = 𝟙 (tensorObj X Y)
+  apply Subtype.ext
+  funext v t
+  apply Wires.ext
+  intro i
+  simp only [CategoryStruct.comp, Function.comp, braiding_hom, braiding_get]
+  have htXY : (X ⊗ Y).obj = X.obj + Y.obj := rfl
+  split <;> split <;>
+  exact congrArg (v t).get (Fin.ext (by simp only []; omega))
+
+@[inline, simp]
+instance : SymmetricCategory (SequentialCircuitCategory V G) where
+  braiding
+  braiding_naturality_left
+  braiding_naturality_right
+  hexagon_forward
+  hexagon_reverse
+  symmetry
 
 end SequentialCircuitCategory
 
