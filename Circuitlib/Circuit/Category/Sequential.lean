@@ -952,6 +952,117 @@ instance : SymmetricCategory (SequentialCircuitCategory V G) where
   hexagon_reverse
   symmetry
 
+variable [Bot V]
+
+@[inline, simp]
+def trace_aux
+    [Bot V]
+    {A B W : SequentialCircuitCategory V G}
+    (f : A ⊗ W ⟶ B ⊗ W)
+    (a : Stream (Wires V A.obj)) : ℕ → ℕ → Wires V W.obj
+  | 0, _ => Vector.ofFn fun _ => ⊥
+  | n + 1, s =>
+    if s ≤ n then trace_aux f a n s
+    else
+      let combined : Stream (Wires V (A.obj + W.obj)) :=
+        fun s => (a s).append (trace_aux f a n s)
+      show Wires V W.obj from
+        ((f.val combined n).drop B.obj).cast (by simp)
+
+@[inline, simp]
+def trace_val
+    {A B : SequentialCircuitCategory V G}
+    (W : SequentialCircuitCategory V G)
+    (f : A ⊗ W ⟶ B ⊗ W)
+    (a : Stream (Wires V A.obj)) :
+    Stream (Wires V B.obj) := fun t =>
+  let w := trace_aux f a (t + 1)
+  let combined : Stream (Wires V (A.obj + W.obj)) := fun s => (a s).append (w s)
+  ((f.val combined t).take B.obj).cast (by simp)
+
+@[simp]
+lemma trace_w_aux_monotone
+    {A B W : SequentialCircuitCategory V G}
+    (f : A ⊗ W ⟶ B ⊗ W)
+    {a₁ a₂ : Stream (Wires V A.obj)}
+    (ha : a₁ ≤ a₂) :
+    ∀ n s, trace_aux f a₁ n s ≤ trace_aux f a₂ n s := by
+  intro n
+  induction n with
+  | zero => intro s i; simp [trace_aux]
+  | succ k ih =>
+    intro s i
+    simp only [trace_aux]
+    split
+    · exact ih s i
+    · simp only [Vector.get]
+      have hcomb : ∀ s' (j : Fin (A.obj + W.obj)),
+          ((a₁ s').append (trace_aux f a₁ k s')).get j ≤
+          ((a₂ s').append (trace_aux f a₂ k s')).get j :=
+        fun s' j => Fin.addCases
+          (fun l => by
+            simp only [Vector.get, Vector.append]
+            rw [Array.getElem_append_left (by simp),
+                Array.getElem_append_left (by simp)]
+            exact ha s' l)
+          (fun l => by
+            simp only [Vector.get, Vector.append]
+            rw [Array.getElem_append_right (by simp),
+                Array.getElem_append_right (by simp)]
+            have := ih s' l
+            simp only [Vector.get] at this
+            convert this using 1 <;> simp)
+          j
+      have hf := f.property.1 hcomb k
+        ⟨B.obj + i.val,
+          by change B.obj + i.val < B.obj + W.obj; omega⟩
+      simp only [Vector.get, Vector.cast, Vector.drop,
+                  Array.getElem_extract] at hf ⊢
+      convert hf
+
+@[simp]
+lemma trace_monotone
+    {A B W : SequentialCircuitCategory V G}
+    (f : A ⊗ W ⟶ B ⊗ W) :
+    Monotone (trace_val W f) := fun a₁ a₂ ha t i => by
+  change (trace_val W f a₁ t).get i ≤ (trace_val W f a₂ t).get i
+  unfold trace_val
+  have hw := trace_w_aux_monotone f ha
+  have hcomb : ∀ s' (j : Fin (A.obj + W.obj)),
+      ((a₁ s').append (trace_aux f a₁ (t + 1) s')).get j ≤
+      ((a₂ s').append (trace_aux f a₂ (t + 1) s')).get j :=
+    fun s' j => Fin.addCases
+      (fun l => by
+        simp only [Vector.get, Vector.append]
+        rw [Array.getElem_append_left (by simp),
+            Array.getElem_append_left (by simp)]
+        exact ha s' l)
+      (fun l => by
+        simp only [Vector.get, Vector.append]
+        rw [Array.getElem_append_right (by simp),
+            Array.getElem_append_right (by simp)]
+        have := hw (t + 1) s' l
+        simp only [Vector.get] at this
+        convert this using 1 <;> simp)
+      j
+  rw [wires_take_cast_get, wires_take_cast_get]
+  exact f.property.1 hcomb t (i.castAdd W.obj)
+
+@[simp]
+lemma trace_causal
+    {A B W : SequentialCircuitCategory V G}
+    (f : A ⊗ W ⟶ B ⊗ W) :
+    Causal (trace_val W f) := sorry
+
+@[inline, simp]
+def trace
+    [Bot V]
+    {A B : SequentialCircuitCategory V G}
+    (W : SequentialCircuitCategory V G)
+    (f : A ⊗ W ⟶ B ⊗ W) :
+    A ⟶ B :=
+  ⟨trace_val W f, ⟨trace_monotone f, trace_causal f⟩⟩
+
 end SequentialCircuitCategory
 
 end Circuit
