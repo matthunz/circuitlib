@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-      - uses: leanprover/lean-action@v1
+      - uses: leanprover/lean-action@main
       - name: Build project documentation
         id: build-docgen
         uses: leanprover-community/docgen-action@main
