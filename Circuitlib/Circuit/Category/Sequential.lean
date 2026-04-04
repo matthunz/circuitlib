@@ -234,6 +234,13 @@ lemma iso_inv_hom_id
   funext v
   rfl
 
+omit [Preorder V] in
+@[simp]
+lemma id_coe_apply
+    [Preorder V]
+    (X : SequentialCircuitCategory V G) (v : Stream (Wires V X.obj)) :
+    (𝟙 X : Hom V X X).val v = v := rfl
+
 @[inline, simp]
 def iso
     (h : n = m) :
@@ -242,6 +249,7 @@ def iso
     inv := iso_inv h
     hom_inv_id := iso_hom_inv_id h
     inv_hom_id := iso_inv_hom_id h }
+
 
 @[simp]
 lemma whisker
@@ -254,9 +262,9 @@ lemma whisker
   intro i
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · rw [tensorHom_eq_left v t j (𝟙 X) (𝟙 Y)]
-    simp [CategoryStruct.id, id, id_val, Stream'.map, Wires.get_ofFn]
+    simp [CategoryStruct.id, id, id_val, Stream'.map, Stream'.get, Wires.get_ofFn]
   · rw [tensorHom_eq_right v t j (𝟙 X) (𝟙 Y)]
-    simp [CategoryStruct.id, id, id_val, Stream'.map, Wires.get_ofFn]
+    simp [CategoryStruct.id, id, id_val, Stream'.map, Stream'.get, Wires.get_ofFn]
 
 @[inline, simp]
 abbrev whiskerLeft
@@ -492,6 +500,11 @@ instance : MonoidalCategory.{v} (SequentialCircuitCategory V G) where
   triangle
 
 @[simp]
+lemma monoidal_tensorObj_obj
+    (X Y : SequentialCircuitCategory V G) :
+    (X ⊗ Y).obj = X.obj + Y.obj := rfl
+
+@[simp]
 lemma braiding_hom_eq
     {X Y : SequentialCircuitCategory V G} :
     (X ⊗ Y).obj - X.obj + min X.obj (X ⊗ Y).obj = (Y ⊗ X).obj :=
@@ -526,11 +539,11 @@ lemma braiding_hom_monotone
     Monotone (X.braiding_hom_val Y) := fun a b hab t i => by
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · simp only [Stream'.map, Stream'.get, Vector.get, Vector.cast, Vector.append,
-               Vector.drop, instMonoidalCategory, Vector.size_toArray, Fin.val_cast,
+               Vector.drop, monoidal_tensorObj_obj, Vector.size_toArray, Fin.val_cast,
                Fin.val_castAdd, Array.size_extract, min_self, Nat.add_sub_cancel_left, Fin.is_lt,
                Array.getElem_append_left, Array.getElem_extract]
     exact hab t ⟨X.obj + j.val, braiding_hom_lt⟩
-  · simp only [Stream.map, Stream'.map, Stream'.get, braiding_hom_val, instMonoidalCategory,
+  · simp only [Stream.map, Stream'.map, Stream'.get, braiding_hom_val, monoidal_tensorObj_obj,
                Vector.get, Vector.cast, Vector.append, Vector.drop, Vector.take,
                Vector.size_toArray, Fin.val_cast, Fin.val_natAdd, Array.size_extract, min_self,
                Nat.add_sub_cancel_left, Nat.le_add_right, Array.getElem_append_right,
@@ -550,8 +563,10 @@ lemma braiding_hom_inv_id
   apply Wires.ext
   intro i
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
-  · simp [Vector.get, Vector.append]
-  · simp [Vector.get, Vector.append]
+  · simp [CategoryStruct.comp, Function.comp, braiding_hom, braiding_hom_val,
+          monoidal_tensorObj_obj, id_coe_apply, monoidal_tensorObj_obj, Vector.get, Vector.append]
+  · simp [CategoryStruct.comp, Function.comp, braiding_hom, braiding_hom_val,
+          monoidal_tensorObj_obj, id_coe_apply, Vector.get, Vector.append]
 
 @[inline, simp]
 def braiding (X Y : SequentialCircuitCategory V G) : X ⊗ Y ≅ Y ⊗ X :=
@@ -577,19 +592,19 @@ lemma braiding_naturality_left
   dsimp only [Function.comp]
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
   · simp [Vector.get, Vector.append]
-  · simp only [Vector.get, instCategory, id, instMonoidalCategory, tensorUnit, tensorObj,
-               Vector.append, Vector.take_eq_extract, Vector.drop_eq_cast_extract,
-               Vector.toArray_extract, Vector.extract_mk, Array.extract_append, Vector.size_toArray,
-               Nat.sub_self, Nat.add_sub_cancel_left, Array.extract_extract, Nat.add_zero, min_self,
-               Vector.cast_mk, Nat.sub_zero, Nat.zero_le, Nat.sub_eq_zero_of_le, Array.extract_zero,
-               Array.append_empty, Array.append_assoc, Vector.drop_mk, Fin.val_cast,
-               Fin.val_natAdd, Array.size_extract, Nat.le_add_right, inf_of_le_right,
+  · simp only [Vector.get, monoidal_tensorObj_obj, Vector.cast, Vector.append, Vector.drop,
+               Vector.take, Array.take_eq_extract, Array.drop_eq_extract, Vector.size_toArray,
+               id_coe_apply, Array.size_append, Array.size_extract, min_self,
+               Nat.add_sub_cancel_left, Array.extract_append, Nat.sub_self, Array.extract_extract,
+               Nat.add_zero, Nat.zero_le, Nat.sub_eq_zero_of_le, Array.extract_zero,
+               Array.append_empty, Array.append_assoc, Vector.take_eq_extract,
+               Vector.toArray_extract, Vector.cast_mk, Vector.drop_mk, Vector.extract_mk,
+               Nat.sub_zero, Fin.val_cast, Fin.val_natAdd, Nat.le_add_right, inf_of_le_right,
                Array.getElem_append_right, Array.getElem_extract, Nat.zero_add,
-               Vector.getElem_toArray]
-    exact congrArg (·[j.val]) (congrFun (congrArg f.val (funext fun n => by
-      rw [← Vector.toArray_inj]
-      simp [Vector.toArray_cast, Vector.toArray_extract,
-        Array.extract_eq_empty_iff])) t)
+               Vector.getElem_toArray, inf_of_le_left, Nat.add_le_add_iff_left]
+    congr 1
+    exact congrFun (congrArg f.val (funext fun n =>
+      Wires.ext (fun k => by simp [Vector.get]))) t
 
 @[simp]
 lemma braiding_naturality_right
@@ -607,16 +622,7 @@ lemma braiding_naturality_right
   unfold Stream.map Stream'.map Stream'.zip Stream'.get
   dsimp only [Function.comp]
   refine Fin.addCases (fun j => ?_) (fun j => ?_) i
-  · simp only [Vector.get, instCategory, id, instMonoidalCategory, tensorUnit, tensorObj,
-               Vector.append, Vector.drop_eq_cast_extract, Vector.extract_mk, Array.extract_append,
-               Nat.zero_add, Nat.le_add_right, inf_of_le_right, Array.size_extract,
-               Vector.size_toArray, Nat.sub_zero, Nat.sub_self, Nat.add_sub_cancel_left,
-               Vector.cast_mk, min_self, Nat.zero_le, Array.append_assoc, Vector.drop_mk,
-               Fin.val_cast, Fin.val_castAdd, Array.getElem_append_right, Fin.is_lt,
-               Array.getElem_append_left, Array.getElem_extract, Vector.getElem_toArray]
-    exact congrArg (·[j.val]) (congrFun (congrArg f.val (funext fun n => by
-      rw [← Vector.toArray_inj]
-      simp [Vector.toArray_cast, Vector.toArray_extract])) t)
+  · simp [Vector.get, Vector.drop, Vector.take, Vector.append, Vector.cast]
   · simp [Vector.get, Vector.append]
 
 omit [Preorder V] in
